@@ -126,7 +126,7 @@ export default function LoginPage() {
         </div>
         
         <p className="text-center text-teal-800/50 text-sm font-medium mt-8">
-          © {new Date().getFullYear()} Dompet Dhuafa Pendidikan
+          © {new Date().getFullYear()} TEACH GREAT Edunesia
         </p>
       </div>
     </div>
