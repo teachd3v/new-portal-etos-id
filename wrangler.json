@@ -1,0 +1,13 @@
+{
+  "name": "new-portal-etos-id",
+  "compatibility_date": "2024-04-01",
+  "pages_build_output_dir": ".vercel/output/static",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "portal-etos-id-d1",
+      "database_id": "406b9607-2ac3-4fdd-9ac2-91298cb73989",
+      "migrations_dir": "drizzle"
+    }
+  ]
+}

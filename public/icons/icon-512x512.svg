@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F766E" />
+      <stop offset="100%" stop-color="#042F2E" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#grad)"/>
+  <rect x="24" y="24" width="464" height="464" rx="96" fill="none" stroke="#2DD4BF" stroke-width="12" stroke-opacity="0.4"/>
+  <circle cx="256" cy="256" r="160" fill="#FFFFFF" fill-opacity="0.08" />
+  <text x="256" y="270" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="180" font-weight="900" fill="#FFFFFF" text-anchor="middle" dominant-baseline="central" letter-spacing="-6">ET</text>
+  <text x="256" y="375" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="40" font-weight="800" fill="#2DD4BF" text-anchor="middle" letter-spacing="10">PORTAL</text>
+</svg>
