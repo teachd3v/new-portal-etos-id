@@ -68,8 +68,8 @@ export default function PwaInstallPrompt() {
       <div className="bg-slate-900/90 backdrop-blur-xl border border-white/20 text-white rounded-3xl p-5 shadow-2xl flex items-start justify-between gap-4">
         
         <div className="flex items-start gap-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center text-teal-300 shrink-0">
-            <Smartphone className="w-6 h-6" />
+          <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0 p-1.5 overflow-hidden">
+            <img src="/icons/icon-192x192.png" alt="Etos ID" className="w-full h-full object-contain" />
           </div>
 
           <div className="space-y-1">

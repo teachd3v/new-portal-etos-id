@@ -32,8 +32,11 @@ export const metadata = {
     title: "Etos Portal",
   },
   icons: {
-    icon: "/icon.svg",
-    apple: "/icons/icon-192x192.svg",
+    icon: [
+      { url: '/favicon.png', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
   },
 };
 

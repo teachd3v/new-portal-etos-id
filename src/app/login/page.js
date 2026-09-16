@@ -52,8 +52,12 @@ export default function LoginPage() {
       <div className="w-full max-w-md mx-auto z-10 p-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
         
         <div className="text-center mb-10">
-          <div className="w-20 h-20 bg-white/40 rounded-3xl flex items-center justify-center backdrop-blur-md shadow-inner mx-auto mb-6 border border-white/60">
-            <span className="font-black text-4xl tracking-tighter text-teal-800">RL</span>
+          <div className="w-20 h-20 bg-white/60 rounded-3xl flex items-center justify-center backdrop-blur-md shadow-lg shadow-teal-900/5 mx-auto mb-6 border border-white/80 p-3">
+            <img 
+              src="/favicon.png" 
+              alt="Logo Etos ID" 
+              className="w-full h-full object-contain drop-shadow-sm" 
+            />
           </div>
           <h1 className="text-3xl font-black text-teal-950 tracking-tight mb-2">Welcome Back</h1>
           <p className="text-teal-800/70 font-medium">Masuk ke Portal Etos ID</p>
