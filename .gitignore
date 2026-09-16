@@ -42,6 +42,7 @@ next-env.d.ts
 
 # wrangler and sqlite databases
 .wrangler/
+.open-next/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
