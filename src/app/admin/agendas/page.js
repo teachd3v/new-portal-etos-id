@@ -267,25 +267,6 @@ function AdminAgendasContent() {
         </button>
       </div>
 
-      {/* Sub-Tabs: Agenda vs Presensi */}
-      <div className="hidden md:flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-        <Link
-          href="/admin/agendas?tab=agenda"
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold whitespace-nowrap bg-teal-800 text-white shadow-md shadow-teal-900/15"
-        >
-          <span>Daftar Agenda</span>
-          <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-white/20 text-white">
-            {agendas.length}
-          </span>
-        </Link>
-        <Link
-          href="/admin/agendas?tab=presensi"
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold whitespace-nowrap bg-white/60 hover:bg-white text-teal-900/70 hover:text-teal-950 border border-teal-200/60 shadow-xs transition-all"
-        >
-          <span>Presensi Kehadiran</span>
-        </Link>
-      </div>
-
       {/* Main Container Card */}
       <div className="bg-white/40 backdrop-blur-2xl rounded-2xl md:rounded-[2.5rem] shadow-[0_8px_32px_rgba(20,184,166,0.1)] p-4 md:p-8 border border-white/60">
         
@@ -1005,22 +986,6 @@ function AdminPresensiContent() {
             {wilayahOptions.map(w => <option key={w} value={w}>{w}</option>)}
           </select>
         </div>
-      </div>
-
-      {/* Sub-Tabs: Agenda vs Presensi */}
-      <div className="hidden md:flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-        <Link
-          href="/admin/agendas?tab=agenda"
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold whitespace-nowrap bg-white/60 hover:bg-white text-teal-900/70 hover:text-teal-950 border border-teal-200/60 shadow-xs transition-all"
-        >
-          <span>Daftar Agenda</span>
-        </Link>
-        <Link
-          href="/admin/agendas?tab=presensi"
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold whitespace-nowrap bg-teal-800 text-white shadow-md shadow-teal-900/15"
-        >
-          <span>Presensi Kehadiran</span>
-        </Link>
       </div>
 
       {data.length === 0 ? (

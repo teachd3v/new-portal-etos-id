@@ -110,7 +110,7 @@ function HeaderContent({ handleLogout }) {
                   onChange={(e) => router.push(e.target.value)}
                   className="bg-white/90 backdrop-blur-md border border-teal-200/90 text-teal-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500/30 cursor-pointer max-w-[210px] truncate"
                 >
-                  <option value="/admin/agendas?tab=agenda">Manajemen Agenda</option>
+                  <option value="/admin/agendas?tab=agenda">Daftar Agenda</option>
                   <option value="/admin/agendas?tab=presensi">Presensi Kehadiran</option>
                 </select>
                 <ChevronDown className="w-3.5 h-3.5 text-teal-600 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -153,9 +153,16 @@ function HeaderContent({ handleLogout }) {
                 <Link href="/admin/settings?tab=etoser" scroll={false} className={tab === 'etoser' ? activeClass : inactiveClass}>Instrumen Etoser</Link>
                 <Link href="/admin/settings?tab=sanksi" scroll={false} className={tab === 'sanksi' ? activeClass : inactiveClass}>Katalog Sanksi</Link>
               </>
-            ) : isUsers ? null : isAgendas ? (
+            ) : isUsers ? (
               <>
-                <Link href="/admin/agendas?tab=agenda" scroll={false} className={tab === 'agenda' ? activeClass : inactiveClass}>Manajemen Agenda</Link>
+                <Link href="/admin/users" scroll={false} className={role === 'All Roles' ? activeClass : inactiveClass}>Semua Role</Link>
+                <Link href="/admin/users?role=Etoser" scroll={false} className={role === 'Etoser' ? activeClass : inactiveClass}>Etoser</Link>
+                <Link href="/admin/users?role=Fasilitator" scroll={false} className={role === 'Fasilitator' ? activeClass : inactiveClass}>Fasilitator</Link>
+                <Link href="/admin/users?role=Admin" scroll={false} className={role === 'Admin' ? activeClass : inactiveClass}>Admin</Link>
+              </>
+            ) : isAgendas ? (
+              <>
+                <Link href="/admin/agendas?tab=agenda" scroll={false} className={tab === 'agenda' ? activeClass : inactiveClass}>Daftar Agenda</Link>
                 <Link href="/admin/agendas?tab=presensi" scroll={false} className={tab === 'presensi' ? activeClass : inactiveClass}>Presensi Kehadiran</Link>
               </>
             ) : pathname === '/admin' ? (

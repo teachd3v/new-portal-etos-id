@@ -458,36 +458,6 @@ function AdminUsersContent() {
         </div>
       </div>
 
-      {/* Role Segmented Filter Tabs */}
-      <div className="hidden md:flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-        {[
-          { id: 'All Roles', label: 'Semua Role', count: roleCounts.all },
-          { id: 'Etoser', label: 'Etoser', count: roleCounts.etoser },
-          { id: 'Fasilitator', label: 'Fasilitator', count: roleCounts.fasil },
-          { id: 'Admin', label: 'Admin', count: roleCounts.admin }
-        ].map((tab) => {
-          const isActive = roleFilter === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => updateQueryParams({ role: tab.id === 'All Roles' ? '' : tab.id, page: "1" })}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs md:text-sm font-bold whitespace-nowrap transition-all cursor-pointer ${
-                isActive
-                  ? 'bg-teal-800 text-white shadow-md shadow-teal-900/15'
-                  : 'bg-white/60 hover:bg-white text-teal-900/70 hover:text-teal-950 border border-teal-200/60 shadow-xs'
-              }`}
-            >
-              <span>{tab.label}</span>
-              <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
-                isActive ? 'bg-white/20 text-white' : 'bg-teal-900/10 text-teal-800 font-semibold'
-              }`}>
-                {tab.count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
       {/* Main Container Card (Glassmorphic) */}
       <div className="bg-white/40 backdrop-blur-2xl rounded-2xl md:rounded-[2.5rem] shadow-[0_8px_32px_rgba(20,184,166,0.1)] p-4 md:p-8 border border-white/60">
         
