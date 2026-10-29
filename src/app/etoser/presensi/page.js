@@ -1,7 +1,10 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Calendar, Clock, CheckCircle2, AlertCircle, Loader2, Award, FileText, X } from 'lucide-react';
+import {
+  Calendar, Clock, CheckCircle2, AlertCircle, Loader2, Award,
+  FileText, X, Paperclip, ExternalLink, UploadCloud
+} from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function EtoserPresensiPage() {
@@ -18,6 +21,17 @@ export default function EtoserPresensiPage() {
   const [isKuisModalOpen, setIsKuisModalOpen] = useState(false);
   const [submittingKuis, setSubmittingKuis] = useState(false);
   const [kuisResult, setKuisResult] = useState(null);
+
+  // Penugasan states
+  const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
+  const [activeSubmissionAgenda, setActiveSubmissionAgenda] = useState(null);
+  const [submissionForm, setSubmissionForm] = useState({
+    file_name: '',
+    file_url: '',
+    link_url: '',
+    notes: ''
+  });
+  const [submittingSubmission, setSubmittingSubmission] = useState(false);
 
   useEffect(() => {
     const fetchPresensi = async () => {
@@ -48,11 +62,88 @@ export default function EtoserPresensiPage() {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         setIsKuisModalOpen(false);
+        setIsSubmissionModalOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  const openSubmissionModal = (agenda) => {
+    setActiveSubmissionAgenda(agenda);
+    if (agenda.submission) {
+      setSubmissionForm({
+        file_name: agenda.submission.file_name || '',
+        file_url: agenda.submission.file_url || '',
+        link_url: agenda.submission.link_url || '',
+        notes: agenda.submission.notes || ''
+      });
+    } else {
+      setSubmissionForm({
+        file_name: '',
+        file_url: '',
+        link_url: '',
+        notes: ''
+      });
+    }
+    setIsSubmissionModalOpen(true);
+  };
+
+  const handleSubmissionFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error('Ukuran file maksimal 8MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setSubmissionForm(prev => ({
+        ...prev,
+        file_name: file.name,
+        file_url: event.target.result
+      }));
+      toast.success(`File "${file.name}" siap diunggah`);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmissionSubmit = async (e) => {
+    e.preventDefault();
+    if (!submissionForm.file_url && !submissionForm.link_url) {
+      toast.error('Harap unggah file atau cantumkan tautan link penugasan!');
+      return;
+    }
+
+    setSubmittingSubmission(true);
+    try {
+      const res = await fetch(`/api/client/agenda-submission/${activeSubmissionAgenda.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          file_name: submissionForm.file_name,
+          file_url: submissionForm.file_url,
+          link_url: submissionForm.link_url,
+          notes: submissionForm.notes
+        })
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        toast.success(json.message || 'Penugasan berhasil dikumpulkan!');
+        setAgendas(agendas.map(a => a.id === activeSubmissionAgenda.id ? { ...a, submission: json.submission } : a));
+        setIsSubmissionModalOpen(false);
+      } else {
+        const err = await res.json();
+        toast.error(err.error || 'Gagal mengumpulkan tugas');
+      }
+    } catch (e) {
+      toast.error('Terjadi kesalahan jaringan');
+    } finally {
+      setSubmittingSubmission(false);
+    }
+  };
 
   const handleHadir = async (agendaId) => {
     setSubmitting(true);
@@ -202,6 +293,105 @@ export default function EtoserPresensiPage() {
                       {agenda.start_time} - {agenda.end_time}
                     </div>
                   </div>
+
+                  {/* Penugasan Kegiatan Card Section */}
+                  {(agenda.hasAssignment || agenda.assignment_title || agenda.assignment_file_url || agenda.assignment_link || agenda.submission) && (
+                    <div className="mb-4 p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-xl space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-200/80 text-amber-900 inline-flex items-center gap-1">
+                          <Paperclip className="w-3 h-3 text-amber-700" />
+                          Penugasan Kegiatan
+                        </span>
+                        {agenda.submission ? (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> Terkumpul
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                            Belum Mengumpulkan
+                          </span>
+                        )}
+                      </div>
+
+                      {agenda.assignment_title && (
+                        <p className="text-xs font-semibold text-slate-800 leading-relaxed whitespace-pre-wrap">
+                          {agenda.assignment_title}
+                        </p>
+                      )}
+
+                      {/* Panduan / Link dari Admin atau Fasil */}
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {agenda.assignment_file_url && (
+                          <a
+                            href={agenda.assignment_file_url}
+                            download={agenda.assignment_file_name || 'panduan-penugasan'}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-950 bg-white hover:bg-amber-100/70 px-2.5 py-1.5 rounded-lg border border-amber-300 transition-colors cursor-pointer"
+                          >
+                            <Paperclip className="w-3.5 h-3.5 text-amber-700" />
+                            <span>Unduh Panduan Tugas ({agenda.assignment_file_name || 'File'})</span>
+                          </a>
+                        )}
+                        {agenda.assignment_link && (
+                          <a
+                            href={agenda.assignment_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-900 bg-white hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg border border-indigo-200 transition-colors cursor-pointer"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 text-indigo-700" />
+                            <span>Buka Link Penugasan &rarr;</span>
+                          </a>
+                        )}
+                      </div>
+
+                      {/* Detail Pengumpulan Peserta */}
+                      {agenda.submission && (
+                        <div className="mt-2 pt-2 border-t border-amber-200/60 text-xs text-slate-700 space-y-1">
+                          <p className="text-[11px] font-bold text-amber-900">Pengumpulan Tugas Kamu:</p>
+                          {agenda.submission.file_url && (
+                            <a
+                              href={agenda.submission.file_url}
+                              download={agenda.submission.file_name || 'tugas-saya'}
+                              className="text-xs font-semibold text-teal-800 hover:underline flex items-center gap-1.5"
+                            >
+                              <Paperclip className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                              <span className="truncate">{agenda.submission.file_name || 'Unduh File Tugas Saya'}</span>
+                            </a>
+                          )}
+                          {agenda.submission.link_url && (
+                            <a
+                              href={agenda.submission.link_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs font-semibold text-indigo-800 hover:underline flex items-center gap-1.5"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                              <span className="truncate">{agenda.submission.link_url}</span>
+                            </a>
+                          )}
+                          {agenda.submission.notes && (
+                            <p className="text-[11px] text-slate-600 italic">Catatan: {agenda.submission.notes}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Tombol Kumpulkan / Ubah Penugasan */}
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={() => openSubmissionModal(agenda)}
+                          className={`w-full py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            agenda.submission
+                              ? 'bg-amber-200 hover:bg-amber-300 text-amber-950 border border-amber-300'
+                              : 'bg-amber-600 hover:bg-amber-700 text-white shadow-sm'
+                          }`}
+                        >
+                          <UploadCloud className="w-4 h-4" />
+                          <span>{agenda.submission ? 'Ubah / Perbarui Penugasan' : 'Unggah / Kumpulkan Penugasan'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="pt-3 md:pt-4 border-t border-sky-200/50 flex flex-wrap gap-2.5 items-center justify-between">
                     {/* 1. Pre-Test (Accessible before/during attendance) */}
@@ -383,6 +573,102 @@ export default function EtoserPresensiPage() {
                 </form>
               </div>
             )}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL PENGUMPULAN PENUGASAN ETOSER */}
+      {isSubmissionModalOpen && activeSubmissionAgenda && typeof document !== 'undefined' && createPortal(
+        <div onClick={() => setIsSubmissionModalOpen(false)} className="fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl md:rounded-[2.5rem] p-5 md:p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200 relative cursor-default space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-md">
+                  Pengumpulan Tugas
+                </span>
+                <h3 className="text-xl font-black text-slate-900 mt-1">{activeSubmissionAgenda.name}</h3>
+                <p className="text-xs text-slate-500 font-semibold">{activeSubmissionAgenda.theme || 'Agenda Pembinaan'}</p>
+              </div>
+              <button onClick={() => setIsSubmissionModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form 2 Metode Pengumpulan */}
+            <form onSubmit={handleSubmissionSubmit} className="space-y-4">
+              {/* Metode 1: File */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                <label className="block text-xs font-bold text-slate-800">
+                  Metode 1: Unggah File Penugasan
+                </label>
+                {submissionForm.file_name ? (
+                  <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <Paperclip className="w-4 h-4 text-teal-600 shrink-0" />
+                      <span className="text-xs font-bold text-slate-900 truncate">{submissionForm.file_name}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSubmissionForm(prev => ({ ...prev, file_name: '', file_url: '' }))}
+                      className="text-rose-500 hover:text-rose-700 p-1 hover:bg-rose-50 rounded-lg cursor-pointer"
+                      title="Hapus file"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 hover:border-amber-400 bg-white rounded-xl cursor-pointer transition-colors group">
+                    <UploadCloud className="w-6 h-6 text-amber-500 group-hover:scale-110 transition-transform mb-1" />
+                    <span className="text-xs font-bold text-slate-800">Pilih File Tugas</span>
+                    <span className="text-[10px] text-slate-400">PDF, Word, Excel, PPT, Zip, Gambar (Max 8MB)</span>
+                    <input type="file" className="hidden" onChange={handleSubmissionFileUpload} />
+                  </label>
+                )}
+              </div>
+
+              {/* Metode 2: Link */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                <label className="block text-xs font-bold text-slate-800">
+                  Metode 2: Tautan Link Penugasan
+                </label>
+                <div className="relative">
+                  <ExternalLink className="w-4 h-4 text-indigo-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="url"
+                    value={submissionForm.link_url || ''}
+                    onChange={(e) => setSubmissionForm(prev => ({ ...prev, link_url: e.target.value }))}
+                    placeholder="https://drive.google.com/... atau link dokumen tugas"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                  />
+                </div>
+                <span className="text-[10px] text-slate-400 block">
+                  Bisa berupa link Google Drive, Docs, Canva, Github, atau tautan tugas lainnya.
+                </span>
+              </div>
+
+              {/* Catatan / Notes */}
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">
+                  Catatan Tambahan (Opsional)
+                </label>
+                <textarea
+                  value={submissionForm.notes || ''}
+                  onChange={(e) => setSubmissionForm(prev => ({ ...prev, notes: e.target.value }))}
+                  rows={2}
+                  placeholder="Tuliskan catatan pengumpulan tugas jika ada..."
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={submittingSubmission || (!submissionForm.file_url && !submissionForm.link_url)}
+                className="w-full bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl shadow-lg transition-all cursor-pointer text-xs md:text-sm"
+              >
+                {submittingSubmission ? 'Mengirim Penugasan...' : 'Simpan & Kumpulkan Penugasan'}
+              </button>
+            </form>
           </div>
         </div>,
         document.body

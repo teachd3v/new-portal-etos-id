@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
-import { agendas, post_test_questions, post_test_attempts, attendance } from '@/db/schema';
+import { agendas, post_test_questions, post_test_attempts, attendance, agenda_submissions } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 export async function GET(req, { params }) {
@@ -36,7 +36,7 @@ export async function PUT(req, { params }) {
     const body = await req.json();
     
     const result = await db.transaction(async (tx) => {
-      const updatedAgenda = await tx.update(agendas).set({
+      const updatePayload = {
         name: body.name,
         type: body.type,
         activity_type: body.activity_type || null,
@@ -47,7 +47,14 @@ export async function PUT(req, { params }) {
         end_time: body.end_time || null,
         is_active: body.is_active,
         target_role: body.target_role || 'ETOSER',
-      }).where(eq(agendas.id, id)).returning();
+      };
+
+      if (body.assignment_title !== undefined) updatePayload.assignment_title = body.assignment_title || null;
+      if (body.assignment_file_name !== undefined) updatePayload.assignment_file_name = body.assignment_file_name || null;
+      if (body.assignment_file_url !== undefined) updatePayload.assignment_file_url = body.assignment_file_url || null;
+      if (body.assignment_link !== undefined) updatePayload.assignment_link = body.assignment_link || null;
+
+      const updatedAgenda = await tx.update(agendas).set(updatePayload).where(eq(agendas.id, id)).returning();
       
       if (updatedAgenda.length === 0) {
         throw new Error("Agenda not found");
@@ -113,6 +120,9 @@ export async function DELETE(req, { params }) {
       
       // 3. Delete associated attendance records
       await tx.delete(attendance).where(eq(attendance.agenda_id, id));
+
+      // 3b. Delete associated assignment submissions
+      await tx.delete(agenda_submissions).where(eq(agenda_submissions.agenda_id, id));
       
       // 4. Delete agenda
       const deletedAgenda = await tx.delete(agendas).where(eq(agendas.id, id)).returning();

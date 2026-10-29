@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
-import { users, agendas, attendance, post_test_questions, post_test_attempts } from '@/db/schema';
+import { users, agendas, attendance, post_test_questions, post_test_attempts, agenda_submissions } from '@/db/schema';
 import { eq, inArray, and } from 'drizzle-orm';
 import { verifyJwt } from '@/lib/auth';
 
@@ -48,9 +48,10 @@ export async function GET(req) {
       }
     }
 
-    // 4. Get questions & attempts for target agendas
+    // 4. Get questions, attempts, and submissions for target agendas
     let questionRecords = [];
     let attemptRecords = [];
+    let submissionRecords = [];
     if (targetAgendaIds.length > 0) {
       const chunkSize = 500;
       for (let i = 0; i < targetAgendaIds.length; i += chunkSize) {
@@ -64,6 +65,9 @@ export async function GET(req) {
 
         const aRecs = await db.select().from(post_test_attempts).where(inArray(post_test_attempts.agenda_id, chunk));
         attemptRecords = [...attemptRecords, ...aRecs];
+
+        const sRecs = await db.select().from(agenda_submissions).where(inArray(agenda_submissions.agenda_id, chunk));
+        submissionRecords = [...submissionRecords, ...sRecs];
       }
     }
 
@@ -84,6 +88,7 @@ export async function GET(req) {
       const preTestCount = agendaQuestions.filter(q => (q.test_type || 'POST_TEST').toUpperCase() === 'PRE_TEST').length;
       const postTestCount = agendaQuestions.filter(q => (q.test_type || 'POST_TEST').toUpperCase() === 'POST_TEST').length;
       const agendaAttempts = attemptRecords.filter(a => a.agenda_id === agenda.id);
+      const agendaSubmissions = submissionRecords.filter(s => s.agenda_id === agenda.id);
       
       const participantStatus = targetUsers.map(user => {
         const preAttempt = agendaAttempts.find(
@@ -95,6 +100,7 @@ export async function GET(req) {
         const preScore = preAttempt ? Math.round(preAttempt.score) : null;
         const postScore = postAttempt ? Math.round(postAttempt.score) : null;
         const gainScore = preScore !== null && postScore !== null ? postScore - preScore : null;
+        const sub = agendaSubmissions.find(s => s.user_id === user.id) || null;
 
         return {
           ...user,
@@ -104,6 +110,7 @@ export async function GET(req) {
           hasTakenPostTest: !!postAttempt,
           postTestScore: postScore,
           gainScore,
+          submission: sub,
         };
       });
 

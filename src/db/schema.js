@@ -28,6 +28,10 @@ export const agendas = sqliteTable('agendas', {
   end_time: text('end_time'),
   is_active: integer('is_active', { mode: 'boolean' }).default(true),
   target_role: text('target_role').default('ETOSER'),
+  assignment_title: text('assignment_title'),
+  assignment_file_name: text('assignment_file_name'),
+  assignment_file_url: text('assignment_file_url'),
+  assignment_link: text('assignment_link'),
 });
 
 export const app_settings = sqliteTable('app_settings', {
@@ -227,5 +231,16 @@ export const post_test_attempts = sqliteTable('post_test_attempts', {
   score: real('score').notNull(),
   answers: text('answers').notNull(), // JSON stringified answer dictionary: {"questionId": "A"}
   timestamp: integer('timestamp', { mode: 'timestamp' }).notNull(),
+});
+
+export const agenda_submissions = sqliteTable('agenda_submissions', {
+  id: text('id').primaryKey(),
+  agenda_id: text('agenda_id').references(() => agendas.id, { onDelete: 'cascade' }).notNull(),
+  user_id: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  file_name: text('file_name'),
+  file_url: text('file_url'),
+  link_url: text('link_url'),
+  notes: text('notes'),
+  submitted_at: text('submitted_at'),
 });
 

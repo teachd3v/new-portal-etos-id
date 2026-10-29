@@ -55,6 +55,10 @@ export async function POST(req) {
         end_time: body.end_time || null,
         is_active: body.is_active !== undefined ? body.is_active : true,
         target_role: body.target_role || 'ETOSER',
+        assignment_title: body.assignment_title || null,
+        assignment_file_name: body.assignment_file_name || null,
+        assignment_file_url: body.assignment_file_url || null,
+        assignment_link: body.assignment_link || null,
       }).returning();
 
       // Insert Pre-Test Questions

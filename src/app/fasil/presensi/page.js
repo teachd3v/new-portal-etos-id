@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import {
   Users, Calendar, Search, Loader2, CheckCircle2, XCircle,
   Clock, AlertCircle, Award, FileText, X, ChevronDown, ChevronUp,
-  Plus, Edit2, Trash2, Copy, Download
+  Plus, Edit2, Trash2, Copy, Download, Paperclip, ExternalLink, UploadCloud
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
@@ -21,9 +21,201 @@ const EMPTY_FASIL_AGENDA_FORM = {
   end_time: "",
   is_active: true,
   target_role: "ETOSER",
+  assignment_title: "",
+  assignment_file_name: "",
+  assignment_file_url: "",
+  assignment_link: "",
   preTestQuestions: [],
   questions: []
 };
+
+function FasilAssignmentBuilder({ formData, setFormData }) {
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error('Ukuran file maksimal 8MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setFormData(prev => ({
+        ...prev,
+        assignment_file_name: file.name,
+        assignment_file_url: event.target.result
+      }));
+      toast.success(`File "${file.name}" siap diunggah`);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeFile = () => {
+    setFormData(prev => ({
+      ...prev,
+      assignment_file_name: "",
+      assignment_file_url: ""
+    }));
+  };
+
+  return (
+    <div className="border-t border-orange-100 pt-5 mt-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Paperclip className="w-4 h-4 text-orange-600" />
+          <h4 className="font-bold text-slate-900 text-sm md:text-base">Setup Penugasan Agenda (Opsional)</h4>
+        </div>
+        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-orange-100 text-orange-800 border border-orange-200">
+          File & Link
+        </span>
+      </div>
+      <p className="text-xs text-slate-500">
+        Lampirkan petunjuk atau file lembar kerja penugasan untuk dikerjakan Etoser binaan.
+      </p>
+
+      <div>
+        <label className="block text-xs font-bold text-slate-700 mb-1">Judul / Instruksi Penugasan</label>
+        <textarea
+          value={formData.assignment_title || ""}
+          onChange={(e) => setFormData(prev => ({ ...prev, assignment_title: e.target.value }))}
+          className="w-full px-3 py-2 rounded-xl bg-white border border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 text-xs text-slate-900"
+          rows={2}
+          placeholder="Instruksi penugasan untuk etoser..."
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+        <div className="p-3 bg-orange-50/40 border border-orange-100 rounded-2xl space-y-2">
+          <label className="block text-xs font-bold text-slate-700">1. Unggah File Panduan / Lembar Kerja</label>
+          {formData.assignment_file_name ? (
+            <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-orange-200">
+              <div className="flex items-center gap-2 min-w-0 pr-2">
+                <Paperclip className="w-4 h-4 text-orange-600 shrink-0" />
+                <span className="text-xs font-semibold text-slate-900 truncate">{formData.assignment_file_name}</span>
+              </div>
+              <button
+                type="button"
+                onClick={removeFile}
+                className="text-rose-500 hover:text-rose-700 p-1 rounded-lg hover:bg-rose-50 cursor-pointer"
+                title="Hapus file"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center justify-center p-3.5 border-2 border-dashed border-orange-200 hover:border-orange-300 bg-white/70 rounded-xl cursor-pointer transition-colors group">
+              <UploadCloud className="w-5 h-5 text-orange-500 group-hover:scale-110 transition-transform mb-1" />
+              <span className="text-xs font-bold text-slate-700">Pilih Dokumen / File</span>
+              <span className="text-[10px] text-slate-400">PDF, Word, Excel, PPT, Zip (Max 8MB)</span>
+              <input type="file" className="hidden" onChange={handleFileUpload} />
+            </label>
+          )}
+        </div>
+
+        <div className="p-3 bg-orange-50/40 border border-orange-100 rounded-2xl space-y-2">
+          <label className="block text-xs font-bold text-slate-700">2. Tautan Link Penugasan</label>
+          <div className="relative">
+            <ExternalLink className="w-4 h-4 text-orange-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="url"
+              value={formData.assignment_link || ""}
+              onChange={(e) => setFormData(prev => ({ ...prev, assignment_link: e.target.value }))}
+              placeholder="https://drive.google.com/..."
+              className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 text-xs text-slate-900"
+            />
+          </div>
+          <span className="text-[10px] text-slate-400 block">
+            Google Drive, GDocs, Canva, atau tautan materi lainnya.
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FasilSubmissionDetailModal({ submission, onClose }) {
+  if (!submission) return null;
+  return typeof document !== 'undefined' && createPortal(
+    <div onClick={onClose} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
+      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl md:rounded-[2rem] p-6 md:p-8 w-full max-w-lg shadow-2xl space-y-5 animate-in zoom-in-95 duration-200 cursor-default">
+        <div className="flex items-center justify-between pb-3 border-b border-orange-100">
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-orange-800 bg-orange-100 px-2.5 py-0.5 rounded-md">
+              Penugasan Terkumpul
+            </span>
+            <h3 className="text-xl font-black text-slate-900 mt-1">{submission.userName}</h3>
+            <p className="text-xs text-slate-500 font-semibold">{submission.agendaName}</p>
+          </div>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {submission.submitted_at && (
+            <p className="text-xs text-slate-500 font-medium">
+              Waktu Pengumpulan: <strong>{new Date(submission.submitted_at).toLocaleString('id-ID')}</strong>
+            </p>
+          )}
+
+          {submission.notes && (
+            <div className="p-3 bg-orange-50/60 border border-orange-100 rounded-xl">
+              <p className="text-[11px] font-bold text-orange-800 uppercase mb-0.5">Catatan Peserta:</p>
+              <p className="text-xs text-slate-800 font-medium whitespace-pre-wrap">{submission.notes}</p>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-slate-700">Hasil Pengumpulan:</p>
+            
+            {submission.file_url ? (
+              <a
+                href={submission.file_url}
+                download={submission.file_name || 'penugasan'}
+                className="flex items-center justify-between p-3 rounded-xl bg-orange-50 hover:bg-orange-100 border border-orange-200 text-slate-900 transition-colors group cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                  <Paperclip className="w-4 h-4 text-orange-600 shrink-0" />
+                  <span className="text-xs font-bold truncate">{submission.file_name || 'Unduh File Penugasan'}</span>
+                </div>
+                <span className="text-xs font-extrabold text-orange-700 group-hover:underline shrink-0">Unduh &darr;</span>
+              </a>
+            ) : (
+              <p className="text-xs text-slate-400 italic">Tidak ada file yang diunggah.</p>
+            )}
+
+            {submission.link_url ? (
+              <a
+                href={submission.link_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between p-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-950 transition-colors group cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                  <ExternalLink className="w-4 h-4 text-indigo-700 shrink-0" />
+                  <span className="text-xs font-bold truncate">{submission.link_url}</span>
+                </div>
+                <span className="text-xs font-extrabold text-indigo-700 group-hover:underline shrink-0">Buka Link &rarr;</span>
+              </a>
+            ) : (
+              <p className="text-xs text-slate-400 italic">Tidak ada tautan link.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2.5 rounded-xl transition-all cursor-pointer text-xs"
+          >
+            Tutup
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 function FasilQuestionBuilder({
   title,
@@ -155,6 +347,7 @@ function FasilPresensiContent() {
   const [isEditingAgenda, setIsEditingAgenda] = useState(false);
   const [agendaForm, setAgendaForm] = useState(EMPTY_FASIL_AGENDA_FORM);
   const [savingAgenda, setSavingAgenda] = useState(false);
+  const [viewingSubmission, setViewingSubmission] = useState(null);
 
   const toggleAgendaExpand = (idx) => {
     setExpandedAgendas(prev => {
@@ -322,6 +515,10 @@ function FasilPresensiContent() {
         setAgendaForm({
           ...d.agenda,
           target_role: d.agenda.target_role || "ETOSER",
+          assignment_title: d.agenda.assignment_title || "",
+          assignment_file_name: d.agenda.assignment_file_name || "",
+          assignment_file_url: d.agenda.assignment_file_url || "",
+          assignment_link: d.agenda.assignment_link || "",
           preTestQuestions: d.preTestQuestions || [],
           questions: d.questions || []
         });
@@ -329,6 +526,10 @@ function FasilPresensiContent() {
         setAgendaForm({
           ...agenda,
           target_role: agenda.target_role || "ETOSER",
+          assignment_title: agenda.assignment_title || "",
+          assignment_file_name: agenda.assignment_file_name || "",
+          assignment_file_url: agenda.assignment_file_url || "",
+          assignment_link: agenda.assignment_link || "",
           preTestQuestions: [],
           questions: []
         });
@@ -337,6 +538,10 @@ function FasilPresensiContent() {
       setAgendaForm({
         ...agenda,
         target_role: agenda.target_role || "ETOSER",
+        assignment_title: agenda.assignment_title || "",
+        assignment_file_name: agenda.assignment_file_name || "",
+        assignment_file_url: agenda.assignment_file_url || "",
+        assignment_link: agenda.assignment_link || "",
         preTestQuestions: [],
         questions: []
       });
@@ -479,7 +684,11 @@ function FasilPresensiContent() {
       toast.error('Tidak ada data untuk di-export');
       return;
     }
-    const headers = ['ID Agenda', 'Nama Agenda', 'Tipe', 'Tanggal', 'ID Etoser', 'Nama Etoser', 'Angkatan', 'Wilayah', 'Kehadiran', 'Skor Pre-Test', 'Skor Post-Test', 'Gain (Post - Pre)'];
+    const headers = [
+      'ID Agenda', 'Nama Agenda', 'Tipe', 'Tanggal', 'ID Etoser', 'Nama Etoser', 'Angkatan', 'Wilayah',
+      'Kehadiran', 'Skor Pre-Test', 'Skor Post-Test', 'Gain (Post - Pre)',
+      'Status Tugas', 'File Tugas', 'Link Tugas', 'Catatan Tugas'
+    ];
     const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lines = [
       headers.map(esc).join(','),
@@ -495,7 +704,11 @@ function FasilPresensiContent() {
         r.hadir ? 'Hadir' : 'Alpa',
         r.preTestScore ?? '',
         r.postTestScore ?? '',
-        r.gainScore !== null ? (r.gainScore > 0 ? `+${r.gainScore}` : r.gainScore) : ''
+        r.gainScore !== null ? (r.gainScore > 0 ? `+${r.gainScore}` : r.gainScore) : '',
+        r.submission ? 'Terkumpul' : 'Belum',
+        r.submission?.file_name || '',
+        r.submission?.link_url || '',
+        r.submission?.notes || ''
       ].map(esc).join(','))
     ];
     const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
@@ -772,13 +985,14 @@ function FasilPresensiContent() {
                     <th className="pb-3 text-center">Kehadiran</th>
                     <th className="pb-3 text-center">Skor Pre-Test</th>
                     <th className="pb-3 text-center">Skor Post-Test</th>
-                    <th className="pb-3 text-center pr-2">Selisih / Gain (Δ)</th>
+                    <th className="pb-3 text-center">Gain (Δ)</th>
+                    <th className="pb-3 text-center pr-2">Penugasan</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {skorRows.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="py-12 text-center text-slate-400 font-medium">
+                      <td colSpan="7" className="py-12 text-center text-slate-400 font-medium">
                         Tidak ada data skor yang sesuai dengan filter.
                       </td>
                     </tr>
@@ -822,7 +1036,7 @@ function FasilPresensiContent() {
                             <span className="text-xs font-semibold text-slate-400">Belum</span>
                           )}
                         </td>
-                        <td className="py-4 text-center pr-2">
+                        <td className="py-4 text-center">
                           {row.gainScore !== null ? (
                             <span className={`inline-block font-black text-xs px-2.5 py-1 rounded-xl border ${
                               row.gainScore > 0
@@ -835,6 +1049,21 @@ function FasilPresensiContent() {
                             </span>
                           ) : (
                             <span className="text-xs font-semibold text-slate-300">-</span>
+                          )}
+                        </td>
+                        <td className="py-4 text-center pr-2">
+                          {row.submission ? (
+                            <button
+                              type="button"
+                              onClick={() => setViewingSubmission({ ...row.submission, userName: row.name, agendaName: row.agendaName })}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-200 transition-colors cursor-pointer"
+                              title="Lihat Tugas Terkumpul"
+                            >
+                              <Paperclip className="w-3.5 h-3.5 text-amber-600" />
+                              <span>Lihat</span>
+                            </button>
+                          ) : (
+                            <span className="text-xs text-slate-300">-</span>
                           )}
                         </td>
                       </tr>
@@ -878,6 +1107,17 @@ function FasilPresensiContent() {
                         </p>
                       </div>
                     </div>
+
+                    {row.submission && (
+                      <button
+                        type="button"
+                        onClick={() => setViewingSubmission({ ...row.submission, userName: row.name, agendaName: row.agendaName })}
+                        className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 py-1.5 rounded-xl border border-amber-200 mt-2 transition-colors cursor-pointer"
+                      >
+                        <Paperclip className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Lihat Tugas Terkumpul</span>
+                      </button>
+                    )}
                   </div>
                 ))
               )}
@@ -911,6 +1151,12 @@ function FasilPresensiContent() {
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
                         Post-Test: {agenda.postTestCount || 0} Soal
                       </span>
+                      {(agenda.assignment_title || agenda.assignment_file_url || agenda.assignment_link) && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
+                          <Paperclip className="w-2.5 h-2.5 text-amber-600" />
+                          Tugas
+                        </span>
+                      )}
                     </div>
                     <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
                       agenda.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
@@ -1046,7 +1292,7 @@ function FasilPresensiContent() {
                                   <span>Alpa</span>
                                 </div>
                               )}
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 flex-wrap justify-end">
                                 {etoser.hasTakenPreTest && (
                                   <span className="text-[10px] font-black text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-200">
                                     Pre: {etoser.preTestScore}
@@ -1056,6 +1302,17 @@ function FasilPresensiContent() {
                                   <span className="text-[10px] font-black text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">
                                     Post: {etoser.postTestScore}
                                   </span>
+                                )}
+                                {etoser.submission && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setViewingSubmission({ ...etoser.submission, userName: etoser.name, agendaName: item.agenda.name })}
+                                    className="text-[10px] font-black text-amber-800 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded border border-amber-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                    title="Lihat Tugas Terkumpul"
+                                  >
+                                    <Paperclip className="w-2.5 h-2.5 text-amber-600" />
+                                    <span>Tugas</span>
+                                  </button>
                                 )}
                               </div>
                             </div>
@@ -1216,6 +1473,9 @@ function FasilPresensiContent() {
                 emptyText="Belum ada soal Post-Test untuk agenda ini."
               />
 
+              {/* Assignment Builder */}
+              <FasilAssignmentBuilder formData={agendaForm} setFormData={setAgendaForm} />
+
               <button
                 type="submit"
                 disabled={savingAgenda}
@@ -1338,6 +1598,12 @@ function FasilPresensiContent() {
         </div>,
         document.body
       )}
+
+      {/* Detail Submission Modal */}
+      <FasilSubmissionDetailModal
+        submission={viewingSubmission}
+        onClose={() => setViewingSubmission(null)}
+      />
     </div>
   );
 }

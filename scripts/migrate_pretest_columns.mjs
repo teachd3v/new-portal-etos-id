@@ -19,6 +19,28 @@ async function migrateDb(dbPath) {
       console.log(`  = test_type already exists on ${tbl}`);
     }
   }
+
+  const agendasInfo = await c.execute(`PRAGMA table_info(agendas)`);
+  for (const col of ['assignment_title', 'assignment_file_name', 'assignment_file_url', 'assignment_link']) {
+    if (!agendasInfo.rows.some((r) => r.name === col)) {
+      await c.execute(`ALTER TABLE agendas ADD COLUMN ${col} TEXT`);
+      console.log(`  + Added ${col} to agendas`);
+    }
+  }
+
+  await c.execute(`
+    CREATE TABLE IF NOT EXISTS agenda_submissions (
+      id TEXT PRIMARY KEY NOT NULL,
+      agenda_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      file_name TEXT,
+      file_url TEXT,
+      link_url TEXT,
+      notes TEXT,
+      submitted_at TEXT
+    )
+  `);
+  console.log(`  + Verified agenda_submissions table`);
 }
 
 async function inspectDb(dbPath) {

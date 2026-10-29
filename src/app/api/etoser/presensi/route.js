@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { agendas, attendance, post_test_questions, post_test_attempts } from '@/db/schema';
+import { agendas, attendance, post_test_questions, post_test_attempts, agenda_submissions } from '@/db/schema';
 import { eq, and, or, isNull } from 'drizzle-orm';
 
 export async function GET(req) {
@@ -29,6 +29,9 @@ export async function GET(req) {
     // Fetch attempts for this user
     const attempts = await db.select().from(post_test_attempts).where(eq(post_test_attempts.user_id, userId));
 
+    // Fetch assignment submissions for this user
+    const submissions = await db.select().from(agenda_submissions).where(eq(agenda_submissions.user_id, userId));
+
     // Combine and add real-time validation
     const now = new Date();
     const result = allAgendas.map(agenda => {
@@ -55,6 +58,8 @@ export async function GET(req) {
       const preScore = preAttempt ? Math.round(preAttempt.score) : null;
       const postScore = postAttempt ? Math.round(postAttempt.score) : null;
       const gainScore = preScore !== null && postScore !== null ? postScore - preScore : null;
+      const userSub = submissions.find(s => s.agenda_id === agenda.id) || null;
+      const hasAssignment = !!(agenda.assignment_title || agenda.assignment_file_url || agenda.assignment_link);
 
       return {
         ...agenda,
@@ -66,7 +71,9 @@ export async function GET(req) {
         hasPostTest,
         hasTakenPostTest: !!postAttempt,
         postTestScore: postScore,
-        gainScore
+        gainScore,
+        hasAssignment,
+        submission: userSub,
       };
     });
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
-import { users, agendas, attendance, post_test_questions, post_test_attempts } from '@/db/schema';
+import { users, agendas, attendance, post_test_questions, post_test_attempts, agenda_submissions } from '@/db/schema';
 import { eq, inArray, and, or, isNull } from 'drizzle-orm';
 import { verifyJwt } from '@/lib/auth';
 
@@ -45,9 +45,10 @@ export async function GET(req) {
       a => !a.target_role || a.target_role === 'ETOSER' || a.target_role === 'SEMUA'
     );
 
-    // 4. Fetch all questions and attempts
+    // 4. Fetch all questions, attempts, and submissions
     const questions = await db.select().from(post_test_questions);
     const allAttempts = await db.select().from(post_test_attempts);
+    const allSubmissions = await db.select().from(agenda_submissions);
 
     // 5. Get attendance for these etosers across agendas
     let attendanceRecords = [];
@@ -66,6 +67,7 @@ export async function GET(req) {
       const preTestCount = agendaQs.filter(q => (q.test_type || 'POST_TEST').toUpperCase() === 'PRE_TEST').length;
       const postTestCount = agendaQs.filter(q => (q.test_type || 'POST_TEST').toUpperCase() === 'POST_TEST').length;
       const agendaAttempts = allAttempts.filter(a => a.agenda_id === agenda.id);
+      const agendaSubs = allSubmissions.filter(s => s.agenda_id === agenda.id);
 
       const etoserStatus = etosers.map(etoser => {
         const preAttempt = agendaAttempts.find(
@@ -77,6 +79,7 @@ export async function GET(req) {
         const preScore = preAttempt ? Math.round(preAttempt.score) : null;
         const postScore = postAttempt ? Math.round(postAttempt.score) : null;
         const gainScore = preScore !== null && postScore !== null ? postScore - preScore : null;
+        const sub = agendaSubs.find(s => s.user_id === etoser.id) || null;
 
         return {
           ...etoser,
@@ -86,6 +89,7 @@ export async function GET(req) {
           hasTakenPostTest: !!postAttempt,
           postTestScore: postScore,
           gainScore,
+          submission: sub,
         };
       });
 
