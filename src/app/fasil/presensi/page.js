@@ -346,8 +346,11 @@ function FasilPresensiContent() {
   const [isAgendaModalOpen, setIsAgendaModalOpen] = useState(false);
   const [isEditingAgenda, setIsEditingAgenda] = useState(false);
   const [agendaForm, setAgendaForm] = useState(EMPTY_FASIL_AGENDA_FORM);
+  const [hasDraftAgenda, setHasDraftAgenda] = useState(false);
   const [savingAgenda, setSavingAgenda] = useState(false);
   const [viewingSubmission, setViewingSubmission] = useState(null);
+
+  const DRAFT_KEY_FASIL = 'portal_etos_agenda_draft_fasil';
 
   const toggleAgendaExpand = (idx) => {
     setExpandedAgendas(prev => {
@@ -495,15 +498,65 @@ function FasilPresensiContent() {
     }
   };
 
+  // Auto-save draft for Fasil agenda creation
+  useEffect(() => {
+    if (isAgendaModalOpen && !isEditingAgenda) {
+      try {
+        const hasContent = agendaForm.name || agendaForm.theme || agendaForm.activity_type ||
+          agendaForm.start_date || (agendaForm.questions && agendaForm.questions.length > 0) ||
+          (agendaForm.preTestQuestions && agendaForm.preTestQuestions.length > 0) ||
+          agendaForm.assignment_title || agendaForm.assignment_link || agendaForm.assignment_file_name;
+
+        if (hasContent) {
+          localStorage.setItem(DRAFT_KEY_FASIL, JSON.stringify(agendaForm));
+          setHasDraftAgenda(true);
+        }
+      } catch (e) {
+        console.error("Failed to save fasil draft", e);
+      }
+    }
+  }, [agendaForm, isAgendaModalOpen, isEditingAgenda]);
+
   // Kelola Agenda handlers for Fasil
   const openAddAgendaModal = () => {
     setIsEditingAgenda(false);
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY_FASIL);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setAgendaForm(parsed);
+        setHasDraftAgenda(true);
+        toast.success('Draft agenda sebelumnya dipulihkan');
+      } else {
+        setAgendaForm({
+          ...EMPTY_FASIL_AGENDA_FORM,
+          type: "Wilayah",
+          theme: fasilWilayah ? `Wilayah ${fasilWilayah}` : ""
+        });
+        setHasDraftAgenda(false);
+      }
+    } catch {
+      setAgendaForm({
+        ...EMPTY_FASIL_AGENDA_FORM,
+        type: "Wilayah",
+        theme: fasilWilayah ? `Wilayah ${fasilWilayah}` : ""
+      });
+      setHasDraftAgenda(false);
+    }
+    setIsAgendaModalOpen(true);
+  };
+
+  const clearFasilDraft = () => {
+    try {
+      localStorage.removeItem(DRAFT_KEY_FASIL);
+    } catch {}
     setAgendaForm({
       ...EMPTY_FASIL_AGENDA_FORM,
       type: "Wilayah",
       theme: fasilWilayah ? `Wilayah ${fasilWilayah}` : ""
     });
-    setIsAgendaModalOpen(true);
+    setHasDraftAgenda(false);
+    toast.success('Draft formulir berhasil dibersihkan');
   };
 
   const openEditAgendaModal = async (agenda) => {
@@ -565,6 +618,12 @@ function FasilPresensiContent() {
       });
       if (res.ok) {
         toast.success(isEditingAgenda ? 'Agenda & soal berhasil diperbarui' : 'Agenda baru berhasil dibuat');
+        if (!isEditingAgenda) {
+          try {
+            localStorage.removeItem(DRAFT_KEY_FASIL);
+          } catch {}
+          setHasDraftAgenda(false);
+        }
         setIsAgendaModalOpen(false);
         fetchData();
       } else {
@@ -1331,13 +1390,34 @@ function FasilPresensiContent() {
 
       {/* MODAL KELOLA AGENDA & SETUP SOAL (FASIL) */}
       {isAgendaModalOpen && typeof document !== 'undefined' && createPortal(
-        <div onClick={() => setIsAgendaModalOpen(false)} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
-          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-[2rem] p-6 md:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300 cursor-default">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl md:text-2xl font-black text-slate-900">
-                {isEditingAgenda ? 'Edit Agenda & Setup Soal Tes' : 'Tambah Agenda Wilayah'}
-              </h3>
-              <button onClick={() => setIsAgendaModalOpen(false)} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-700 cursor-pointer">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-[2rem] p-6 md:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-xl md:text-2xl font-black text-slate-900">
+                  {isEditingAgenda ? 'Edit Agenda & Setup Soal Tes' : 'Tambah Agenda Wilayah'}
+                </h3>
+                {!isEditingAgenda && hasDraftAgenda && (
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className="text-[11px] font-bold text-orange-800 bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-200 inline-flex items-center gap-1">
+                      Draft tersimpan otomatis
+                    </span>
+                    <button
+                      type="button"
+                      onClick={clearFasilDraft}
+                      className="text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
+                    >
+                      Reset Form
+                    </button>
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAgendaModalOpen(false)}
+                className="p-2 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-700 cursor-pointer"
+                title="Tutup (Draft tetap tersimpan)"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1476,13 +1556,22 @@ function FasilPresensiContent() {
               {/* Assignment Builder */}
               <FasilAssignmentBuilder formData={agendaForm} setFormData={setAgendaForm} />
 
-              <button
-                type="submit"
-                disabled={savingAgenda}
-                className="w-full mt-4 bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all cursor-pointer disabled:opacity-50"
-              >
-                {savingAgenda ? 'Menyimpan...' : isEditingAgenda ? 'Simpan Perubahan Agenda & Soal' : 'Buat Agenda'}
-              </button>
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsAgendaModalOpen(false)}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition-all cursor-pointer text-xs md:text-sm"
+                >
+                  {isEditingAgenda ? 'Batal' : 'Tutup (Simpan Draft)'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingAgenda}
+                  className="flex-2 bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all cursor-pointer disabled:opacity-50 text-xs md:text-sm"
+                >
+                  {savingAgenda ? 'Menyimpan...' : isEditingAgenda ? 'Simpan Perubahan' : 'Buat Agenda'}
+                </button>
+              </div>
             </form>
           </div>
         </div>,

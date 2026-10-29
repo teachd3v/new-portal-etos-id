@@ -140,7 +140,7 @@ export default function InstrumenEtoserTab() {
             <UploadCloud className="w-4 h-4 text-teal-700" /> Bulk Import
           </button>
           <button onClick={() => { setFormData({}); setIsModalOpen(true); }} className="bg-teal-800 hover:bg-teal-900 text-white px-3 md:px-4 py-2 rounded-xl flex items-center gap-1.5 font-bold shadow-md transition-all text-xs cursor-pointer">
-            <Plus className="w-4 h-4" /> + Tambah
+            <Plus className="w-4 h-4" /> Tambah
           </button>
         </div>
       </div>

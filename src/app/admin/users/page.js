@@ -453,7 +453,7 @@ function AdminUsersContent() {
             className="bg-teal-800 hover:bg-teal-900 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-xl md:rounded-2xl shadow-lg transition-all flex items-center gap-1.5 shrink-0 text-xs md:text-sm cursor-pointer"
           >
             <UserPlus className="w-4 h-4 md:w-5 md:h-5" />
-            <span>+ Tambah User</span>
+            <span>Tambah User</span>
           </button>
         </div>
       </div>

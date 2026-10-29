@@ -336,6 +336,9 @@ function AdminAgendasContent() {
   const [selectedAgenda, setSelectedAgenda] = useState(null);
   
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [hasDraft, setHasDraft] = useState(false);
+
+  const DRAFT_KEY = 'portal_etos_agenda_draft_admin';
 
   const router = useRouter();
   const pathname = usePathname();
@@ -368,6 +371,53 @@ function AdminAgendasContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Auto-save draft on changes when Add Modal is open
+  useEffect(() => {
+    if (isAddModalOpen) {
+      try {
+        const hasContent = formData.name || formData.theme || formData.activity_type ||
+          formData.start_date || (formData.questions && formData.questions.length > 0) ||
+          (formData.preTestQuestions && formData.preTestQuestions.length > 0) ||
+          formData.assignment_title || formData.assignment_link || formData.assignment_file_name;
+
+        if (hasContent) {
+          localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+          setHasDraft(true);
+        }
+      } catch (e) {
+        console.error("Failed to save draft", e);
+      }
+    }
+  }, [formData, isAddModalOpen]);
+
+  const openAddModal = () => {
+    try {
+      const savedDraft = localStorage.getItem(DRAFT_KEY);
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        setFormData(parsed);
+        setHasDraft(true);
+        toast.success('Draft agenda sebelumnya dipulihkan');
+      } else {
+        setFormData(EMPTY_FORM);
+        setHasDraft(false);
+      }
+    } catch {
+      setFormData(EMPTY_FORM);
+      setHasDraft(false);
+    }
+    setIsAddModalOpen(true);
+  };
+
+  const clearDraft = () => {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {}
+    setFormData(EMPTY_FORM);
+    setHasDraft(false);
+    toast.success('Draft formulir berhasil dibersihkan');
+  };
+
   const fetchAgendas = async () => {
     try {
       const res = await fetch('/api/admin/agendas');
@@ -390,8 +440,12 @@ function AdminAgendasContent() {
       });
       if (res.ok) {
         toast.success('Agenda berhasil ditambahkan');
+        try {
+          localStorage.removeItem(DRAFT_KEY);
+        } catch {}
         setIsAddModalOpen(false);
         setFormData(EMPTY_FORM);
+        setHasDraft(false);
         fetchAgendas();
       } else {
         const err = await res.json();
@@ -609,10 +663,7 @@ function AdminAgendasContent() {
           </p>
         </div>
         <button 
-          onClick={() => {
-            setFormData(EMPTY_FORM);
-            setIsAddModalOpen(true);
-          }}
+          onClick={openAddModal}
           className="bg-teal-800 hover:bg-teal-900 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-xl md:rounded-2xl shadow-lg transition-all flex items-center justify-center gap-1.5 shrink-0 text-xs md:text-sm cursor-pointer"
         >
           <Plus className="w-4 h-4 md:w-5 md:h-5" />
@@ -952,17 +1003,32 @@ function AdminAgendasContent() {
       
       {/* ADD MODAL */}
       {isAddModalOpen && typeof document !== 'undefined' && createPortal(
-        <div onClick={() => {
-          setIsAddModalOpen(false);
-          setFormData(EMPTY_FORM);
-        }} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-teal-950/30 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
-          <div onClick={(e) => e.stopPropagation()} className="bg-white/95 backdrop-blur-xl border border-white/60 rounded-[2rem] p-6 md:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300 cursor-default">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold text-teal-950">Tambah Agenda</h3>
-              <button onClick={() => {
-                setIsAddModalOpen(false);
-                setFormData(EMPTY_FORM);
-              }} className="p-2 bg-white/50 rounded-full hover:bg-white transition-colors text-teal-900 cursor-pointer">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-teal-950/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white/95 backdrop-blur-xl border border-white/60 rounded-[2rem] p-6 md:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-2xl font-bold text-teal-950">Tambah Agenda</h3>
+                {hasDraft && (
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className="text-[11px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 inline-flex items-center gap-1">
+                      Draft tersimpan otomatis
+                    </span>
+                    <button
+                      type="button"
+                      onClick={clearDraft}
+                      className="text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline cursor-pointer"
+                    >
+                      Reset Form
+                    </button>
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                className="p-2 bg-white/50 rounded-full hover:bg-white transition-colors text-teal-900 cursor-pointer"
+                title="Tutup (Draft tetap tersimpan)"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1051,9 +1117,21 @@ function AdminAgendasContent() {
               {/* Assignment Builder */}
               <AssignmentBuilderSection formData={formData} setFormData={setFormData} />
               
-              <button type="submit" className="w-full mt-6 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all active:scale-95 cursor-pointer">
-                Simpan Agenda
-              </button>
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition-all cursor-pointer text-xs md:text-sm"
+                >
+                  Tutup (Simpan Draft)
+                </button>
+                <button
+                  type="submit"
+                  className="flex-2 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all active:scale-95 cursor-pointer text-xs md:text-sm"
+                >
+                  Simpan Agenda
+                </button>
+              </div>
             </form>
           </div>
         </div>,
@@ -1062,11 +1140,8 @@ function AdminAgendasContent() {
 
       {/* EDIT MODAL */}
       {isEditModalOpen && typeof document !== 'undefined' && createPortal(
-        <div onClick={() => {
-          setIsEditModalOpen(false);
-          setFormData(EMPTY_FORM);
-        }} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-teal-950/30 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
-          <div onClick={(e) => e.stopPropagation()} className="bg-white/95 backdrop-blur-xl border border-white/60 rounded-[2rem] p-6 md:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300 cursor-default">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-teal-950/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white/95 backdrop-blur-xl border border-white/60 rounded-[2rem] p-6 md:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold text-teal-950">Edit Agenda</h3>
               <button onClick={() => {
@@ -1165,9 +1240,24 @@ function AdminAgendasContent() {
               {/* Assignment Builder */}
               <AssignmentBuilderSection formData={formData} setFormData={setFormData} />
               
-              <button type="submit" className="w-full mt-6 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all active:scale-95 cursor-pointer">
-                Update Agenda
-              </button>
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setFormData(EMPTY_FORM);
+                  }}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition-all cursor-pointer text-xs md:text-sm"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-2 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all active:scale-95 cursor-pointer text-xs md:text-sm"
+                >
+                  Update Agenda
+                </button>
+              </div>
             </form>
           </div>
         </div>,
