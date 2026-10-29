@@ -37,24 +37,24 @@ export async function GET(req) {
       if (angkatan !== 'all') etosers = etosers.filter(u => u.angkatan === angkatan);
 
       const etoserIds = etosers.map(e => e.id);
+      const etoserIdSet = new Set(etoserIds);
 
-      // 2. Fetch reports for selected period
-      const allReports = await db.select().from(reports).where(
+      // 2. Fetch all ETOSER_SELF_ASSESSMENT reports for the selected year (for both current month table & 12-month trend chart)
+      const yearReports = await db.select().from(reports).where(
         and(
           eq(reports.type, 'ETOSER_SELF_ASSESSMENT'),
-          eq(reports.period_month, bulan),
           eq(reports.period_year, tahun)
         )
       );
 
-      const relevantReports = allReports.filter(r => etoserIds.includes(r.user_id));
-      const reportIds = relevantReports.map(r => r.id);
+      const filteredYearReports = yearReports.filter(r => etoserIdSet.has(r.user_id));
+      const allYearReportIds = filteredYearReports.map(r => r.id);
 
-      // 3. Fetch answers for relevant reports
-      let allAnswers = [];
-      if (reportIds.length > 0) {
-        allAnswers = await db.select().from(report_answers).where(
-          inArray(report_answers.report_id, reportIds)
+      // 3. Fetch answers for all relevant reports in this year
+      let allYearAnswers = [];
+      if (allYearReportIds.length > 0) {
+        allYearAnswers = await db.select().from(report_answers).where(
+          inArray(report_answers.report_id, allYearReportIds)
         );
       }
 
@@ -65,22 +65,33 @@ export async function GET(req) {
         codeToVar[inst.kode] = inst.variabel;
       });
 
-      // 5. Group answers by report
+      const defaultVars = ['Integritas', 'Profesional', 'Adaptif', 'Transformatif'];
+      const discoveredVars = [...new Set(instruments.map(i => i.variabel).filter(Boolean))];
+      const varList = discoveredVars.length > 0 ? discoveredVars : defaultVars;
+
+      // 5. Group answers by report_id
       const answersByReport = {};
-      allAnswers.forEach(ans => {
+      allYearAnswers.forEach(ans => {
         if (!answersByReport[ans.report_id]) answersByReport[ans.report_id] = [];
         answersByReport[ans.report_id].push(ans);
       });
 
-      // 6. Build report mapping by user_id
+      // 6. Filter reports for the currently selected month
+      const relevantReports = filteredYearReports.filter(r => r.period_month === bulan);
       const reportByUser = {};
       relevantReports.forEach(r => {
         reportByUser[r.user_id] = r;
       });
 
-      // 7. Calculate user rows and stats
+      // 7. Calculate user rows, stats, and cohort variable averages for Radar Chart
       let totalScoresSum = 0;
       let submittedCount = 0;
+      const cohortVarSums = {};
+      const cohortVarCounts = {};
+      varList.forEach(v => {
+        cohortVarSums[v] = 0;
+        cohortVarCounts[v] = 0;
+      });
 
       const table = etosers.map(e => {
         const report = reportByUser[e.id];
@@ -107,7 +118,12 @@ export async function GET(req) {
 
         const variableScores = {};
         Object.keys(varTotals).forEach(k => {
-          variableScores[k] = Math.round((varTotals[k] / varCounts[k]) * 100) / 100;
+          const vAvg = Math.round((varTotals[k] / varCounts[k]) * 100) / 100;
+          variableScores[k] = vAvg;
+          if (cohortVarSums[k] !== undefined) {
+            cohortVarSums[k] += vAvg;
+            cohortVarCounts[k] += 1;
+          }
         });
 
         return {
@@ -134,6 +150,41 @@ export async function GET(req) {
 
       const overallAvg = submittedCount > 0 ? Math.round((totalScoresSum / submittedCount) * 100) / 100 : 0;
 
+      // 8. Build Radar Chart Data (Sebaran 4 Variabel)
+      const sebaranVariabel = varList.map(v => ({
+        subject: v,
+        A: cohortVarCounts[v] > 0 ? Math.round((cohortVarSums[v] / cohortVarCounts[v]) * 100) / 100 : 0,
+        fullMark: 4
+      }));
+
+      // 9. Build Monthly Trend Chart Data (Jan - Des in selected year)
+      const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+      const trendBulanan = MONTH_NAMES.map((mName, idx) => {
+        const mReports = filteredYearReports.filter(r => r.period_month === mName);
+        // Deduplicate by user_id (latest report per user in that month)
+        const latestByUser = {};
+        mReports.forEach(r => {
+          latestByUser[r.user_id] = r;
+        });
+        const uniqueReports = Object.values(latestByUser);
+        let mSum = 0;
+        let mCount = 0;
+        uniqueReports.forEach(r => {
+          const ans = answersByReport[r.id] || [];
+          if (ans.length > 0) {
+            const s = ans.reduce((acc, a) => acc + (a.score || 0), 0) / ans.length;
+            mSum += s;
+            mCount++;
+          }
+        });
+        return {
+          month: SHORT_MONTHS[idx],
+          fullMonth: mName,
+          skor_rerata: mCount > 0 ? Math.round((mSum / mCount) * 100) / 100 : 0,
+          count: mCount
+        };
+      });
+
       return NextResponse.json({
         success: true,
         period: { bulan, tahun },
@@ -143,6 +194,11 @@ export async function GET(req) {
           belumMengisi: etosers.length - submittedCount,
           persentase: etosers.length > 0 ? Math.round((submittedCount / etosers.length) * 100) : 0,
           rataRataSkor: overallAvg
+        },
+        charts: {
+          trendBulanan,
+          sebaranVariabel,
+          variables: varList
         },
         table
       });

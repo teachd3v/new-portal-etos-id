@@ -3,7 +3,12 @@ import { useState, useEffect } from 'react';
 import { Search, FileText, CheckCircle2, Clock, Eye, Loader2, Users, ArrowUpRight, BarChart2, Calendar } from 'lucide-react';
 import StatCard from './StatCard';
 import MonitoringDetailModal from './MonitoringDetailModal';
+import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import {
+  ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis
+} from 'recharts';
 
 const MONTH_OPTIONS = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -15,6 +20,7 @@ const YEAR_OPTIONS = ['2024', '2025', '2026', '2027'];
 export default function MonitoringBulananEtoser() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const now = new Date();
   const [bulan, setBulan] = useState(MONTH_OPTIONS[now.getMonth()]);
@@ -56,6 +62,28 @@ export default function MonitoringBulananEtoser() {
         : !row.hasSubmitted;
     return matchesSearch && matchesStatus;
   });
+
+  const variablesList = data?.charts?.variables || ['Integritas', 'Profesional', 'Adaptif', 'Transformatif'];
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-slate-900 text-white p-4 rounded-2xl shadow-xl text-xs">
+          <p className="font-bold mb-1">{payload[0]?.payload?.fullMonth || label}</p>
+          {payload.map((p, idx) => (
+            <p key={idx} style={{ color: p.color }} className="font-semibold">
+              {p.name}: {p.value}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const navigateToEtoserDetail = (etoserId) => {
+    router.push(`/admin/etoser/${etoserId}?mode=monitoring&bulan=${encodeURIComponent(bulan)}&tahun=${encodeURIComponent(tahun)}`);
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -167,6 +195,58 @@ export default function MonitoringBulananEtoser() {
         />
       </div>
 
+      {/* Charts Section (Same layout as RELI Etoser) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white/60 backdrop-blur-md border border-white/80 rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 shadow-sm min-h-[340px] md:min-h-[400px] flex flex-col justify-between">
+          <div>
+            <h3 className="text-base md:text-xl font-black text-slate-900">Trend Rata-rata Skor Monitoring Bulanan ({tahun})</h3>
+            <p className="text-[11px] md:text-xs text-slate-500 font-semibold mt-0.5">Perkembangan rerata skor evaluasi mandiri Etoser setiap periode bulan</p>
+          </div>
+          <div className="flex-1 w-full min-h-[260px] md:min-h-[280px] mt-4">
+            {loading ? (
+              <div className="w-full h-full flex justify-center items-center">
+                <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data?.charts?.trendBulanan || []} margin={{ top: 10, right: 20, left: -20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 12, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
+                  <YAxis domain={[0, 4]} tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                  <Line type="monotone" dataKey="skor_rerata" name="Rata-rata Skor Monitoring" stroke="#0d9488" strokeWidth={4} dot={{ r: 5, fill: '#0d9488' }} activeDot={{ r: 7 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        <div className="lg:col-span-1 bg-white/60 backdrop-blur-md border border-white/80 rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 shadow-sm min-h-[340px] md:min-h-[400px] flex flex-col justify-between">
+          <div>
+            <h3 className="text-base md:text-xl font-black text-slate-900">Sebaran 4 Variabel Monitoring</h3>
+            <p className="text-[11px] md:text-xs text-slate-500 font-semibold mt-0.5">Rata-rata kohort periode {bulan} {tahun}</p>
+          </div>
+          <div className="flex-1 w-full min-h-[280px] mt-2">
+            {loading ? (
+              <div className="w-full h-full flex justify-center items-center">
+                <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data?.charts?.sebaranVariabel || []}>
+                  <PolarGrid stroke="#e2e8f0" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#475569', fontSize: 10, fontWeight: 'bold' }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 4]} stroke="#94a3b8" />
+                  <Radar name="Skor Rata-rata" dataKey="A" stroke="#0d9488" fill="#0d9488" fillOpacity={0.4} />
+                  <Tooltip content={<CustomTooltip />} />
+                </RadarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Table Section */}
       <div className="bg-white/60 backdrop-blur-md border border-white/80 rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 shadow-sm">
         
@@ -174,7 +254,7 @@ export default function MonitoringBulananEtoser() {
           <div>
             <h3 className="text-base md:text-xl font-black text-slate-900">Rekap Isian Monitoring Bulanan Etoser</h3>
             <p className="text-[11px] md:text-xs text-slate-500 font-medium mt-0.5">
-              Data laporan mandiri rutin bulanan Etoser periode {bulan} {tahun}.
+              Klik nama atau baris Etoser untuk melihat rincian grafik longitudinal, radar 4 variabel & butir instrumen periode {bulan} {tahun}.
             </p>
           </div>
           
@@ -198,10 +278,14 @@ export default function MonitoringBulananEtoser() {
             <div className="p-6 text-center text-slate-400 text-xs font-medium">Tidak ada data Etoser ditemukan.</div>
           ) : (
             filteredTable.map((row, i) => (
-              <div key={i} className="bg-white/90 border border-slate-200/80 rounded-2xl p-4 shadow-sm space-y-2.5">
+              <div
+                key={i}
+                onClick={() => navigateToEtoserDetail(row.id)}
+                className="bg-white/90 border border-slate-200/80 rounded-2xl p-4 shadow-sm space-y-2.5 active:scale-[0.99] transition-all cursor-pointer"
+              >
                 <div className="flex justify-between items-start gap-2">
                   <div>
-                    <h4 className="font-bold text-slate-900 text-sm">{row.name}</h4>
+                    <h4 className="font-bold text-slate-900 text-sm hover:text-teal-700 transition-colors">{row.name}</h4>
                     <p className="text-[11px] text-slate-400 font-mono mt-0.5">{row.wilayah} • Angkatan {row.angkatan}</p>
                   </div>
                   <div className="text-right shrink-0">
@@ -226,17 +310,9 @@ export default function MonitoringBulananEtoser() {
                     </span>
                   )}
 
-                  {row.hasSubmitted && row.reportId && (
-                    <button
-                      onClick={() => {
-                        setSelectedReportId(row.reportId);
-                        setShowDetailModal(true);
-                      }}
-                      className="inline-flex items-center gap-1 text-teal-700 hover:text-teal-800 font-bold text-xs bg-teal-50 px-3 py-1.5 rounded-xl border border-teal-200"
-                    >
-                      <Eye className="w-3.5 h-3.5" /> Jawaban
-                    </button>
-                  )}
+                  <span className="inline-flex items-center gap-1 text-teal-700 font-bold text-xs">
+                    Lihat Detail <ArrowUpRight className="w-3.5 h-3.5" />
+                  </span>
                 </div>
               </div>
             ))
@@ -251,30 +327,36 @@ export default function MonitoringBulananEtoser() {
                 <th className="p-4 font-black">Etoser & ID</th>
                 <th className="p-4 font-black">Wilayah / Angkatan</th>
                 <th className="p-4 font-black text-center">Status Laporan</th>
-                <th className="p-4 font-black text-center">Waktu Submit</th>
+                {variablesList.map((vName) => (
+                  <th key={vName} className="p-4 font-black text-center">{vName}</th>
+                ))}
                 <th className="p-4 font-black text-center">Rata-rata Skor</th>
-                <th className="p-4 font-black">Sebaran Variabel</th>
+                <th className="p-4 font-black text-center">Waktu Submit</th>
                 <th className="p-4 font-black text-center">Aksi</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-teal-600">
+                  <td colSpan={6 + variablesList.length} className="p-8 text-center text-teal-600">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto" />
                   </td>
                 </tr>
               ) : filteredTable.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-500 font-medium">
+                  <td colSpan={6 + variablesList.length} className="p-8 text-center text-slate-500 font-medium">
                     Tidak ada data Etoser ditemukan untuk periode dan filter ini.
                   </td>
                 </tr>
               ) : (
                 filteredTable.map((row, i) => (
-                  <tr key={i} className="border-b border-slate-50 hover:bg-teal-50/40 transition-colors">
+                  <tr
+                    key={i}
+                    onClick={() => navigateToEtoserDetail(row.id)}
+                    className="border-b border-slate-50 hover:bg-teal-50/40 transition-colors cursor-pointer group"
+                  >
                     <td className="p-4">
-                      <div className="font-bold text-slate-900 text-sm">{row.name}</div>
+                      <div className="font-bold text-slate-900 text-sm group-hover:text-teal-700 transition-colors">{row.name}</div>
                       <div className="text-[11px] text-slate-400 font-mono mt-0.5">{row.id}</div>
                     </td>
                     
@@ -294,12 +376,11 @@ export default function MonitoringBulananEtoser() {
                       )}
                     </td>
 
-                    <td className="p-4 text-center text-slate-600 font-medium">
-                      {row.submittedAt 
-                        ? new Date(row.submittedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
-                        : '-'
-                      }
-                    </td>
+                    {variablesList.map((vName) => (
+                      <td key={vName} className="p-4 text-center font-bold text-slate-700">
+                        {row.variableScores?.[vName] !== undefined ? Number(row.variableScores[vName]).toFixed(2) : '-'}
+                      </td>
+                    ))}
 
                     <td className="p-4 text-center">
                       {row.avgScore !== null ? (
@@ -311,34 +392,34 @@ export default function MonitoringBulananEtoser() {
                       )}
                     </td>
 
-                    <td className="p-4">
-                      {row.hasSubmitted && row.variableScores && Object.keys(row.variableScores).length > 0 ? (
-                        <div className="flex gap-1.5 flex-wrap max-w-xs">
-                          {Object.entries(row.variableScores).map(([k, v]) => (
-                            <span key={k} className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200">
-                              {k}: <span className="text-teal-700 font-black">{v}</span>
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 text-xs italic">-</span>
-                      )}
+                    <td className="p-4 text-center text-slate-600 font-medium">
+                      {row.submittedAt 
+                        ? new Date(row.submittedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
+                        : '-'
+                      }
                     </td>
 
-                    <td className="p-4 text-center">
-                      {row.hasSubmitted && row.reportId ? (
+                    <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
-                          onClick={() => {
-                            setSelectedReportId(row.reportId);
-                            setShowDetailModal(true);
-                          }}
-                          className="inline-flex items-center gap-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 font-bold px-3 py-1.5 rounded-xl border border-teal-200 transition-colors text-xs"
+                          onClick={() => navigateToEtoserDetail(row.id)}
+                          className="inline-flex items-center gap-1 bg-teal-600 hover:bg-teal-700 text-white font-bold px-3 py-1.5 rounded-xl transition-colors text-xs cursor-pointer shadow-sm"
                         >
-                          <Eye className="w-3.5 h-3.5" /> Lihat Jawaban
+                          <ArrowUpRight className="w-3.5 h-3.5" /> Detail
                         </button>
-                      ) : (
-                        <span className="text-slate-300 text-xs">-</span>
-                      )}
+                        {row.hasSubmitted && row.reportId && (
+                          <button
+                            onClick={() => {
+                              setSelectedReportId(row.reportId);
+                              setShowDetailModal(true);
+                            }}
+                            className="inline-flex items-center gap-1 bg-teal-50 hover:bg-teal-100 text-teal-700 font-bold px-2.5 py-1.5 rounded-xl border border-teal-200 transition-colors text-xs cursor-pointer"
+                            title="Ringkasan Cepat"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

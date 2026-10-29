@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Loader2, CheckCircle2, FileText, User, Calendar, Award } from 'lucide-react';
 
 export default function MonitoringDetailModal({ reportId, isOpen, onClose }) {
@@ -28,11 +29,11 @@ export default function MonitoringDetailModal({ reportId, isOpen, onClose }) {
     fetchDetail();
   }, [isOpen, reportId]);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-100 overflow-hidden">
+  return createPortal(
+    <div onClick={onClose} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
+      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-100 overflow-hidden cursor-default">
         
         {/* Header */}
         <div className="p-6 bg-gradient-to-r from-teal-700 to-teal-900 text-white flex items-center justify-between shrink-0">
@@ -160,6 +161,7 @@ export default function MonitoringDetailModal({ reportId, isOpen, onClose }) {
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
