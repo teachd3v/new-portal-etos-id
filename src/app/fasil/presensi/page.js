@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Users, Calendar, Search, Loader2, CheckCircle2, XCircle,
   Clock, AlertCircle, Award, FileText, X, ChevronDown, ChevronUp,
@@ -547,7 +548,7 @@ function FasilPresensiContent() {
               className="bg-white text-orange-700 hover:bg-orange-50 font-black py-2.5 md:py-3.5 px-5 md:px-6 rounded-xl md:rounded-2xl shadow-lg flex items-center gap-2 text-xs md:text-sm cursor-pointer shrink-0 transition-all"
             >
               <Plus className="w-4 h-4 md:w-5 md:h-5" />
-              <span>+ Tambah Agenda</span>
+              <span>Tambah Agenda</span>
             </button>
           ) : activeTab === 'skor' ? (
             <button
@@ -1072,8 +1073,8 @@ function FasilPresensiContent() {
       )}
 
       {/* MODAL KELOLA AGENDA & SETUP SOAL (FASIL) */}
-      {isAgendaModalOpen && (
-        <div onClick={() => setIsAgendaModalOpen(false)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
+      {isAgendaModalOpen && typeof document !== 'undefined' && createPortal(
+        <div onClick={() => setIsAgendaModalOpen(false)} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-[2rem] p-6 md:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300 cursor-default">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl md:text-2xl font-black text-slate-900">
@@ -1224,12 +1225,13 @@ function FasilPresensiContent() {
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL PENGERJAAN KUIS PRE-TEST / POST-TEST */}
-      {isKuisModalOpen && activeKuis && (
-        <div onClick={() => setIsKuisModalOpen(false)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
+      {isKuisModalOpen && activeKuis && typeof document !== 'undefined' && createPortal(
+        <div onClick={() => setIsKuisModalOpen(false)} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
           <div onClick={(e) => e.stopPropagation()} className="bg-white/95 backdrop-blur-md border border-slate-100 rounded-[2.5rem] p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300 relative cursor-default">
             <button 
               onClick={() => setIsKuisModalOpen(false)} 
@@ -1333,7 +1335,8 @@ function FasilPresensiContent() {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

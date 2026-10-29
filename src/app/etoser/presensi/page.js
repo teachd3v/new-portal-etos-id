@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar, Clock, CheckCircle2, AlertCircle, Loader2, Award, FileText, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -278,8 +279,8 @@ export default function EtoserPresensiPage() {
         )}
       </div>
 
-      {isKuisModalOpen && activeKuis && (
-        <div onClick={() => setIsKuisModalOpen(false)} className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
+      {isKuisModalOpen && activeKuis && typeof document !== 'undefined' && createPortal(
+        <div onClick={() => setIsKuisModalOpen(false)} className="fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
           <div onClick={(e) => e.stopPropagation()} className="bg-white/95 backdrop-blur-md border border-slate-100 rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300 relative cursor-default">
             <button 
               onClick={() => setIsKuisModalOpen(false)} 
@@ -383,7 +384,8 @@ export default function EtoserPresensiPage() {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 import { toast } from 'react-hot-toast';
 import { useState, useEffect, useMemo, Suspense } from "react";
+import { createPortal } from "react-dom";
 import Link from 'next/link';
 import {
   Calendar, Plus, Search, Edit2, Trash2, X, Loader2,
@@ -409,7 +410,7 @@ function AdminAgendasContent() {
           className="bg-teal-800 hover:bg-teal-900 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-xl md:rounded-2xl shadow-lg transition-all flex items-center justify-center gap-1.5 shrink-0 text-xs md:text-sm cursor-pointer"
         >
           <Plus className="w-4 h-4 md:w-5 md:h-5" />
-          <span>+ Tambah Agenda</span>
+          <span>Tambah Agenda</span>
         </button>
       </div>
 
@@ -732,12 +733,12 @@ function AdminAgendasContent() {
       </div>
       
       {/* ADD MODAL */}
-      {isAddModalOpen && (
+      {isAddModalOpen && typeof document !== 'undefined' && createPortal(
         <div onClick={() => {
           setIsAddModalOpen(false);
           setFormData(EMPTY_FORM);
-        }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-teal-950/20 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
-          <div onClick={(e) => e.stopPropagation()} className="bg-white/85 backdrop-blur-xl border border-white/60 rounded-[2rem] p-6 md:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300 cursor-default">
+        }} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-teal-950/30 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white/95 backdrop-blur-xl border border-white/60 rounded-[2rem] p-6 md:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300 cursor-default">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold text-teal-950">Tambah Agenda</h3>
               <button onClick={() => {
@@ -834,16 +835,17 @@ function AdminAgendasContent() {
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* EDIT MODAL */}
-      {isEditModalOpen && (
+      {isEditModalOpen && typeof document !== 'undefined' && createPortal(
         <div onClick={() => {
           setIsEditModalOpen(false);
           setFormData(EMPTY_FORM);
-        }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-teal-950/20 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
-          <div onClick={(e) => e.stopPropagation()} className="bg-white/85 backdrop-blur-xl border border-white/60 rounded-[2rem] p-6 md:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300 cursor-default">
+        }} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-teal-950/30 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white/95 backdrop-blur-xl border border-white/60 rounded-[2rem] p-6 md:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300 cursor-default">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold text-teal-950">Edit Agenda</h3>
               <button onClick={() => {
@@ -944,12 +946,13 @@ function AdminAgendasContent() {
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {isDeleteModalOpen && (
-        <div onClick={() => setIsDeleteModalOpen(false)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-teal-950/30 backdrop-blur-md animate-in fade-in duration-200 cursor-pointer">
-          <div onClick={(e) => e.stopPropagation()} className="bg-white/80 backdrop-blur-2xl border border-white/60 rounded-[2rem] p-8 w-full max-w-sm shadow-2xl text-center animate-in zoom-in-95 duration-300 cursor-default">
+      {isDeleteModalOpen && typeof document !== 'undefined' && createPortal(
+        <div onClick={() => setIsDeleteModalOpen(false)} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-teal-950/30 backdrop-blur-md animate-in fade-in duration-200 cursor-pointer">
+          <div onClick={(e) => e.stopPropagation()} className="bg-white/95 backdrop-blur-2xl border border-white/60 rounded-[2rem] p-8 w-full max-w-sm shadow-2xl text-center animate-in zoom-in-95 duration-300 cursor-default">
             <div className="w-16 h-16 bg-rose-100 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner">
               <Trash2 className="w-8 h-8 text-rose-600" />
             </div>
@@ -973,7 +976,8 @@ function AdminAgendasContent() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>
