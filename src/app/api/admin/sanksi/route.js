@@ -21,9 +21,11 @@ export async function POST(req) {
         id: 'KATALOG_SANKSI-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2,6), 
         ...item 
       }));
-      // SQLite batch insert
-      const newData = await db.insert(katalog_sanksi).values(dataToInsert).returning();
-      return NextResponse.json(newData);
+      // SQLite batch insert chunked by 10 for Cloudflare D1
+      for (let i = 0; i < dataToInsert.length; i += 10) {
+        await db.insert(katalog_sanksi).values(dataToInsert.slice(i, i + 10));
+      }
+      return NextResponse.json(dataToInsert);
     } else {
       const id = 'KATALOG_SANKSI-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2,6);
       const newData = await db.insert(katalog_sanksi).values({ id, ...body }).returning();

@@ -52,7 +52,9 @@ export async function POST(req) {
          }
          
          if (toInsert.length > 0) {
-            await db.insert(instrumen_etoser).values(toInsert);
+            for (let i = 0; i < toInsert.length; i += 10) {
+              await db.insert(instrumen_etoser).values(toInsert.slice(i, i + 10));
+            }
          }
          return NextResponse.json({ success: true });
       }
@@ -61,8 +63,10 @@ export async function POST(req) {
         id: 'INSTRUMEN_ETOSER-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2,6), 
         ...item 
       }));
-      const newData = await db.insert(instrumen_etoser).values(dataToInsert).returning();
-      return NextResponse.json(newData);
+      for (let i = 0; i < dataToInsert.length; i += 10) {
+        await db.insert(instrumen_etoser).values(dataToInsert.slice(i, i + 10));
+      }
+      return NextResponse.json(dataToInsert);
     } else {
       const id = 'INSTRUMEN_ETOSER-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2,6);
       const newData = await db.insert(instrumen_etoser).values({ id, ...body }).returning();

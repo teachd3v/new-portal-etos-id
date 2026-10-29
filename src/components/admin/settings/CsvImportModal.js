@@ -48,10 +48,10 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, endpo
             const values = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(v => v.replace(/^"|"$/g, '').trim());
             const obj = {};
             headers.forEach((header, index) => {
-              obj[header] = values[index];
+              obj[header] = values[index] !== undefined ? values[index] : '';
             });
             return obj;
-          });
+          }).filter(row => Object.values(row).some(v => String(v).trim().length > 0));
           setPreview(data);
         } catch (err) {
           setError(err.message);
@@ -145,9 +145,9 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, endpo
           </div>
 
           {error && (
-            <div className="flex items-start gap-3 p-4 bg-rose-50 text-rose-800 rounded-xl border border-rose-200">
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-              <div className="text-sm font-medium">{error}</div>
+            <div className="flex items-start gap-3 p-4 bg-rose-50 text-rose-800 rounded-xl border border-rose-200 max-h-40 overflow-y-auto">
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-rose-600" />
+              <div className="text-sm font-medium break-words">{error}</div>
             </div>
           )}
 
