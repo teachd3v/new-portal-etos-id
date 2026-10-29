@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { agendas, users } from '@/db/schema';
 import { like, or, and, inArray } from 'drizzle-orm';
@@ -17,6 +17,8 @@ export async function GET(req) {
       { type: 'Menu', label: 'Dashboard Fasilitator', url: '/fasil', subtitle: 'Pusat Pantauan & Summary Binaan' },
       { type: 'Menu', label: 'Presensi Mandiri Fasilitator', url: '/fasil/presensi?tab=self', subtitle: 'Catat Presensi Fasil' },
       { type: 'Menu', label: 'Pemantauan Presensi Binaan', url: '/fasil/presensi?tab=monitoring', subtitle: 'Verifikasi Kehadiran Etoser' },
+      { type: 'Menu', label: 'Skor Pre & Post Test Binaan', url: '/fasil/presensi?tab=skor', subtitle: 'Rekap Nilai Pre-Test, Post-Test & Gain' },
+      { type: 'Menu', label: 'Kelola Agenda & Setup Pre/Post Test', url: '/fasil/presensi?tab=agenda', subtitle: 'Buat Agenda & Soal Pre/Post Test' },
       { type: 'Menu', label: 'Penilaian Peer Etoser (RELI)', url: '/fasil/penilaian', subtitle: 'Daftar Etoser & Input Nilai 64 Butir' },
       { type: 'Menu', label: 'Penilaian Mandiri Fasil', url: '/fasil/penilaian/mandiri', subtitle: 'Asesmen Diri Fasilitator' },
       { type: 'Menu', label: 'Profil Fasilitator', url: '/fasil/profil', subtitle: 'Biodata Fasilitator' },

@@ -17,10 +17,16 @@ function getLocalDb() {
     // Check wrangler miniflare state directory
     const miniflareDir = path.resolve(/*turbopackIgnore: true*/ process.cwd(), '.wrangler/state/v3/d1/miniflare-D1DatabaseObject');
     if (fs.existsSync(miniflareDir)) {
-      const files = fs.readdirSync(miniflareDir);
-      const sqliteFile = files.find(f => f.endsWith('.sqlite'));
-      if (sqliteFile) {
-        dbUrl = `file:${path.join(miniflareDir, sqliteFile)}`;
+      const files = fs.readdirSync(miniflareDir)
+        .filter(f => f.endsWith('.sqlite') && f !== 'metadata.sqlite')
+        .map(f => ({
+          name: f,
+          fullPath: path.join(miniflareDir, f),
+          size: fs.statSync(path.join(miniflareDir, f)).size
+        }))
+        .sort((a, b) => b.size - a.size);
+      if (files.length > 0) {
+        dbUrl = `file:${files[0].fullPath}`;
       }
     }
   }

@@ -1,11 +1,9 @@
 import { db } from '@/db';
 import { agendas, attendance, post_test_questions, post_test_attempts } from '@/db/schema';
-import { eq, and, or, isNull, sql } from 'drizzle-orm';
+import { eq, and, or, isNull } from 'drizzle-orm';
 
 export async function GET(req) {
   try {
-    // In a real app, we would get the Etoser ID from the JWT token.
-    // For now, we mock an Etoser ID or get it from query params.
     const url = new URL(req.url);
     const userId = url.searchParams.get('userId') || 'E2023019';
 
@@ -25,7 +23,7 @@ export async function GET(req) {
     const userAttendance = await db.select().from(attendance).where(eq(attendance.pm_id, userId));
     const attendedAgendaIds = userAttendance.map(a => a.agenda_id);
 
-    // Fetch all post test questions to check if kuis exists
+    // Fetch all pre & post test questions
     const questions = await db.select().from(post_test_questions);
     
     // Fetch attempts for this user
@@ -43,19 +41,32 @@ export async function GET(req) {
         is_open_now = now >= startDateTime && now <= endDateTime;
       }
 
-      // Check if this agenda has any questions
-      const hasPostTest = questions.some(q => q.agenda_id === agenda.id);
+      const agendaQs = questions.filter(q => q.agenda_id === agenda.id);
+      const hasPreTest = agendaQs.some(q => (q.test_type || 'POST_TEST').toUpperCase() === 'PRE_TEST');
+      const hasPostTest = agendaQs.some(q => (q.test_type || 'POST_TEST').toUpperCase() === 'POST_TEST');
       
-      // Check if user has taken it
-      const attempt = attempts.find(a => a.agenda_id === agenda.id);
+      const preAttempt = attempts.find(
+        a => a.agenda_id === agenda.id && (a.test_type || 'POST_TEST').toUpperCase() === 'PRE_TEST'
+      );
+      const postAttempt = attempts.find(
+        a => a.agenda_id === agenda.id && (a.test_type || 'POST_TEST').toUpperCase() === 'POST_TEST'
+      );
+
+      const preScore = preAttempt ? Math.round(preAttempt.score) : null;
+      const postScore = postAttempt ? Math.round(postAttempt.score) : null;
+      const gainScore = preScore !== null && postScore !== null ? postScore - preScore : null;
 
       return {
         ...agenda,
         hasAttended: attendedAgendaIds.includes(agenda.id),
         is_open_now,
+        hasPreTest,
+        hasTakenPreTest: !!preAttempt,
+        preTestScore: preScore,
         hasPostTest,
-        hasTakenPostTest: !!attempt,
-        postTestScore: attempt ? Math.round(attempt.score) : null
+        hasTakenPostTest: !!postAttempt,
+        postTestScore: postScore,
+        gainScore
       };
     });
 
@@ -74,7 +85,6 @@ export async function POST(req) {
     const body = await req.json();
     const { agenda_id, userId } = body;
     
-    // Mock user ID for now if not provided
     const pmId = userId || 'E2023019';
 
     const agendaList = await db.select().from(agendas).where(eq(agendas.id, agenda_id));

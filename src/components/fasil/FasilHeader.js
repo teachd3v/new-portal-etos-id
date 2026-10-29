@@ -106,6 +106,8 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
                 >
                   <option value="/fasil/presensi?tab=self">Presensi Mandiri</option>
                   <option value="/fasil/presensi?tab=monitoring">Pemantauan Binaan</option>
+                  <option value="/fasil/presensi?tab=skor">Skor Pre & Post Test</option>
+                  <option value="/fasil/presensi?tab=agenda">Kelola Agenda</option>
                 </select>
                 <ChevronDown className="w-3.5 h-3.5 text-orange-600 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
@@ -143,6 +145,8 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
               <>
                 <Link href="/fasil/presensi?tab=self" className={tab === 'self' ? activeClass : inactiveClass}>Presensi Mandiri</Link>
                 <Link href="/fasil/presensi?tab=monitoring" className={tab === 'monitoring' ? activeClass : inactiveClass}>Pemantauan Binaan</Link>
+                <Link href="/fasil/presensi?tab=skor" className={tab === 'skor' ? activeClass : inactiveClass}>Skor Pre & Post Test</Link>
+                <Link href="/fasil/presensi?tab=agenda" className={tab === 'agenda' ? activeClass : inactiveClass}>Kelola Agenda</Link>
               </>
             )}
             {isPenilaian && (

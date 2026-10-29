@@ -112,6 +112,7 @@ function HeaderContent({ handleLogout }) {
                 >
                   <option value="/admin/agendas?tab=agenda">Daftar Agenda</option>
                   <option value="/admin/agendas?tab=presensi">Presensi Kehadiran</option>
+                  <option value="/admin/agendas?tab=skor">Skor Pre & Post Test</option>
                 </select>
                 <ChevronDown className="w-3.5 h-3.5 text-teal-600 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
@@ -164,6 +165,7 @@ function HeaderContent({ handleLogout }) {
               <>
                 <Link href="/admin/agendas?tab=agenda" scroll={false} className={tab === 'agenda' ? activeClass : inactiveClass}>Daftar Agenda</Link>
                 <Link href="/admin/agendas?tab=presensi" scroll={false} className={tab === 'presensi' ? activeClass : inactiveClass}>Presensi Kehadiran</Link>
+                <Link href="/admin/agendas?tab=skor" scroll={false} className={tab === 'skor' ? activeClass : inactiveClass}>Skor Pre & Post Test</Link>
               </>
             ) : pathname === '/admin' ? (
               <>

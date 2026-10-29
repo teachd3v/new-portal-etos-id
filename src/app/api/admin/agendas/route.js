@@ -6,7 +6,23 @@ import { eq } from 'drizzle-orm';
 export async function GET(req) {
   try {
     const allAgendas = await db.select().from(agendas);
-    return NextResponse.json(allAgendas);
+    const allQuestions = await db.select({
+      agenda_id: post_test_questions.agenda_id,
+      test_type: post_test_questions.test_type,
+    }).from(post_test_questions);
+
+    const enriched = allAgendas.map(agenda => {
+      const agendaQs = allQuestions.filter(q => q.agenda_id === agenda.id);
+      const preTestCount = agendaQs.filter(q => q.test_type === 'PRE_TEST').length;
+      const postTestCount = agendaQs.filter(q => !q.test_type || q.test_type === 'POST_TEST').length;
+      return {
+        ...agenda,
+        preTestCount,
+        postTestCount,
+      };
+    });
+
+    return NextResponse.json(enriched);
   } catch (error) {
     console.error("Failed to fetch agendas", error);
     return NextResponse.json({ error: "Failed to fetch agendas" }, { status: 500 });
@@ -41,12 +57,29 @@ export async function POST(req) {
         target_role: body.target_role || 'ETOSER',
       }).returning();
 
+      // Insert Pre-Test Questions
+      if (body.preTestQuestions && Array.isArray(body.preTestQuestions)) {
+        for (const q of body.preTestQuestions) {
+          const qId = `PREQ-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+          await tx.insert(post_test_questions).values({
+            id: qId,
+            agenda_id: agendaId,
+            test_type: 'PRE_TEST',
+            question: q.question,
+            options: JSON.stringify(q.options),
+            correct_option: String(q.correct_option),
+          });
+        }
+      }
+
+      // Insert Post-Test Questions
       if (body.questions && Array.isArray(body.questions)) {
         for (const q of body.questions) {
           const qId = `Q-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
           await tx.insert(post_test_questions).values({
             id: qId,
             agenda_id: agendaId,
+            test_type: 'POST_TEST',
             question: q.question,
             options: JSON.stringify(q.options),
             correct_option: String(q.correct_option),

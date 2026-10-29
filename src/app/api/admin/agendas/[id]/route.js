@@ -11,12 +11,18 @@ export async function GET(req, { params }) {
       return NextResponse.json({ error: "Agenda not found" }, { status: 404 });
     }
     const questionsList = await db.select().from(post_test_questions).where(eq(post_test_questions.agenda_id, id));
+    const parsed = questionsList.map(q => ({
+      ...q,
+      options: JSON.parse(q.options)
+    }));
+
+    const preTestQuestions = parsed.filter(q => q.test_type === 'PRE_TEST');
+    const postTestQuestions = parsed.filter(q => !q.test_type || q.test_type === 'POST_TEST');
+
     return NextResponse.json({
       agenda: agendaList[0],
-      questions: questionsList.map(q => ({
-        ...q,
-        options: JSON.parse(q.options)
-      }))
+      preTestQuestions,
+      questions: postTestQuestions
     });
   } catch (error) {
     console.error("Failed to fetch agenda details", error);
@@ -47,19 +53,37 @@ export async function PUT(req, { params }) {
         throw new Error("Agenda not found");
       }
 
-      // Delete existing questions and insert new ones
-      await tx.delete(post_test_questions).where(eq(post_test_questions.agenda_id, id));
+      // Only replace questions if questions or preTestQuestions payload was explicitly provided
+      const shouldUpdateQuestions = Array.isArray(body.questions) || Array.isArray(body.preTestQuestions);
+      if (shouldUpdateQuestions) {
+        await tx.delete(post_test_questions).where(eq(post_test_questions.agenda_id, id));
 
-      if (body.questions && Array.isArray(body.questions)) {
-        for (const q of body.questions) {
-          const qId = `Q-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-          await tx.insert(post_test_questions).values({
-            id: qId,
-            agenda_id: id,
-            question: q.question,
-            options: JSON.stringify(q.options),
-            correct_option: String(q.correct_option),
-          });
+        if (Array.isArray(body.preTestQuestions)) {
+          for (const q of body.preTestQuestions) {
+            const qId = `PREQ-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+            await tx.insert(post_test_questions).values({
+              id: qId,
+              agenda_id: id,
+              test_type: 'PRE_TEST',
+              question: q.question,
+              options: JSON.stringify(q.options),
+              correct_option: String(q.correct_option),
+            });
+          }
+        }
+
+        if (Array.isArray(body.questions)) {
+          for (const q of body.questions) {
+            const qId = `Q-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+            await tx.insert(post_test_questions).values({
+              id: qId,
+              agenda_id: id,
+              test_type: 'POST_TEST',
+              question: q.question,
+              options: JSON.stringify(q.options),
+              correct_option: String(q.correct_option),
+            });
+          }
         }
       }
 
@@ -81,10 +105,10 @@ export async function DELETE(req, { params }) {
     const { id } = await params;
     
     const result = await db.transaction(async (tx) => {
-      // 1. Delete associated post test questions
+      // 1. Delete associated pre & post test questions
       await tx.delete(post_test_questions).where(eq(post_test_questions.agenda_id, id));
       
-      // 2. Delete associated post test attempts
+      // 2. Delete associated pre & post test attempts
       await tx.delete(post_test_attempts).where(eq(post_test_attempts.agenda_id, id));
       
       // 3. Delete associated attendance records

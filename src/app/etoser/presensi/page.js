@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, CheckCircle2, AlertCircle, Loader2, Award, FileText, X } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, AlertCircle, Loader2, Award, FileText, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function EtoserPresensiPage() {
@@ -9,8 +9,9 @@ export default function EtoserPresensiPage() {
   const [submitting, setSubmitting] = useState(false);
   const [userId, setUserId] = useState('');
 
-  // Kuis states
+  // Kuis states (Pre-Test & Post-Test)
   const [activeKuis, setActiveKuis] = useState(null);
+  const [activeKuisType, setActiveKuisType] = useState('POST_TEST'); // 'PRE_TEST' | 'POST_TEST'
   const [kuisQuestions, setKuisQuestions] = useState([]);
   const [kuisAnswers, setKuisAnswers] = useState({});
   const [isKuisModalOpen, setIsKuisModalOpen] = useState(false);
@@ -18,12 +19,11 @@ export default function EtoserPresensiPage() {
   const [kuisResult, setKuisResult] = useState(null);
 
   useEffect(() => {
-    // Fetch current user and then their agendas
     const fetchPresensi = async () => {
       setLoading(true);
       try {
         const userRes = await fetch('/api/auth/me');
-        let currentUserId = 'E2023019'; // Fallback mock
+        let currentUserId = 'E2023019';
         if (userRes.ok) {
           const userData = await userRes.json();
           currentUserId = userData.id;
@@ -75,15 +75,19 @@ export default function EtoserPresensiPage() {
     }
   };
 
-  const startKuis = async (agenda) => {
+  const startKuis = async (agenda, testType = 'POST_TEST') => {
+    if (testType === 'POST_TEST' && agenda.hasPreTest && !agenda.hasTakenPreTest) {
+      toast.error("Harap kerjakan Pre-Test terlebih dahulu sebelum Post-Test!");
+      return;
+    }
     setActiveKuis(agenda);
+    setActiveKuisType(testType);
     setKuisAnswers({});
     setKuisResult(null);
     setIsKuisModalOpen(true);
-    // Temporarily trigger spinner for the questions area only
     setKuisQuestions([]);
     try {
-      const res = await fetch(`/api/client/post-test/${agenda.id}`);
+      const res = await fetch(`/api/client/post-test/${agenda.id}?type=${testType}`);
       if (res.ok) {
         const json = await res.json();
         setKuisQuestions(json.questions || []);
@@ -109,19 +113,24 @@ export default function EtoserPresensiPage() {
       const res = await fetch(`/api/client/post-test/${activeKuis.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, answers: kuisAnswers })
+        body: JSON.stringify({ userId, answers: kuisAnswers, testType: activeKuisType })
       });
       if (res.ok) {
         const json = await res.json();
         setKuisResult(json);
-        toast.success(`Post Test selesai! Skor: ${json.score}`);
+        const label = activeKuisType === 'PRE_TEST' ? 'Pre-Test' : 'Post-Test';
+        toast.success(`${label} selesai! Skor: ${json.score}`);
         
-        // Update agendas list locally
-        setAgendas(agendas.map(a => 
-          a.id === activeKuis.id 
-            ? { ...a, hasTakenPostTest: true, postTestScore: json.score } 
-            : a
-        ));
+        setAgendas(agendas.map(a => {
+          if (a.id !== activeKuis.id) return a;
+          if (activeKuisType === 'PRE_TEST') {
+            const gain = a.postTestScore !== null ? a.postTestScore - json.score : null;
+            return { ...a, hasTakenPreTest: true, preTestScore: json.score, gainScore: gain };
+          } else {
+            const gain = a.preTestScore !== null ? json.score - a.preTestScore : null;
+            return { ...a, hasTakenPostTest: true, postTestScore: json.score, gainScore: gain };
+          }
+        }));
       } else {
         toast.error("Gagal mengirimkan kuis");
       }
@@ -144,15 +153,14 @@ export default function EtoserPresensiPage() {
             </span>
             <h1 className="text-2xl md:text-4xl font-black mb-1 md:mb-2 mt-2 drop-shadow-sm flex items-center gap-2.5 md:gap-3">
               <Calendar className="w-7 h-7 md:w-10 md:h-10 text-sky-200" />
-              Presensi Kehadiran
+              Presensi, Pre-Test & Post-Test
             </h1>
             <p className="text-sky-100/90 font-medium text-xs md:text-lg max-w-xl hidden md:block">
-              Daftar agenda pembinaan yang sedang atau akan berlangsung. Jangan lupa klik tombol "Hadir".
+              Kerjakan Pre-Test sebelum kegiatan, klik &quot;Hadir&quot; saat kegiatan berlangsung, dan selesaikan Post-Test setelahnya.
             </p>
           </div>
         </div>
         
-        {/* Decorative elements */}
         <div className="absolute right-0 top-0 w-96 h-96 bg-sky-400 opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
       </div>
 
@@ -194,41 +202,73 @@ export default function EtoserPresensiPage() {
                     </div>
                   </div>
 
-                  <div className="pt-3 md:pt-4 border-t border-sky-200/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    {agenda.hasAttended ? (
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 md:gap-3 w-full sm:w-auto">
-                        <div className="flex items-center justify-center gap-1.5 md:gap-2 text-emerald-600 font-bold bg-emerald-50 px-3 md:px-4 py-1.5 md:py-2 rounded-xl border border-emerald-100 shadow-sm text-xs md:text-sm">
-                          <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5" />
-                          Sudah Presensi
+                  <div className="pt-3 md:pt-4 border-t border-sky-200/50 flex flex-wrap gap-2.5 items-center justify-between">
+                    {/* 1. Pre-Test (Accessible before/during attendance) */}
+                    {agenda.hasPreTest && (
+                      agenda.hasTakenPreTest ? (
+                        <div className="flex items-center justify-center gap-1.5 text-sky-700 font-extrabold bg-sky-100/80 px-3 py-1.5 rounded-xl border border-sky-200 shadow-xs text-xs md:text-sm">
+                          <Award className="w-4 h-4" />
+                          <span>Skor Pre-Test: {agenda.preTestScore}</span>
                         </div>
-                        {agenda.hasPostTest && (
-                          agenda.hasTakenPostTest ? (
-                            <div className="flex items-center justify-center gap-1.5 md:gap-2 text-indigo-700 font-extrabold bg-indigo-50 px-3 md:px-4 py-1.5 md:py-2 rounded-xl border border-indigo-100 shadow-sm text-xs md:text-sm">
-                              <Award className="w-4 h-4 md:w-5 md:h-5" />
-                              Skor Post Test: {agenda.postTestScore}
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => startKuis(agenda)}
-                              className="flex items-center justify-center gap-1.5 md:gap-2 font-bold px-4 md:px-5 py-1.5 md:py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-md hover:shadow-orange-500/20 active:scale-95 transition-all text-xs md:text-sm w-full sm:w-auto"
-                            >
-                              <FileText className="w-4 h-4 md:w-5 md:h-5" />
-                              Mulai Post Test
-                            </button>
-                          )
-                        )}
+                      ) : (
+                        <button
+                          onClick={() => startKuis(agenda, 'PRE_TEST')}
+                          className="flex items-center justify-center gap-1.5 font-bold px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white shadow-sm transition-all text-xs md:text-sm cursor-pointer"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span>Mulai Pre-Test</span>
+                        </button>
+                      )
+                    )}
+
+                    {/* 2. Attendance Button / Status */}
+                    {agenda.hasAttended ? (
+                      <div className="flex items-center justify-center gap-1.5 text-emerald-600 font-bold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 shadow-sm text-xs md:text-sm">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Sudah Presensi</span>
                       </div>
                     ) : (
                       <button 
                         onClick={() => handleHadir(agenda.id)}
                         disabled={submitting || !agenda.is_open_now}
-                        className={`flex items-center justify-center gap-1.5 md:gap-2 font-bold px-5 md:px-6 py-2 md:py-2.5 rounded-xl shadow-sm transition-all text-xs md:text-sm w-full sm:w-auto ${
-                          !agenda.is_open_now ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-sky-600 hover:bg-sky-700 text-white hover:shadow-sky-600/30'
+                        className={`flex items-center justify-center gap-1.5 font-bold px-4 py-2 rounded-xl shadow-sm transition-all text-xs md:text-sm cursor-pointer ${
+                          !agenda.is_open_now ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
                         }`}
                       >
-                        {submitting ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" /> : <AlertCircle className="w-4 h-4 md:w-5 md:h-5" />}
-                        {agenda.is_open_now ? 'Klik Hadir' : 'Belum Waktunya / Ditutup'}
+                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertCircle className="w-4 h-4" />}
+                        <span>{agenda.is_open_now ? 'Klik Hadir' : 'Belum Waktunya / Ditutup'}</span>
                       </button>
+                    )}
+
+                    {/* 3. Post-Test (Unlocked after Klik Hadir & Pre-Test if any) */}
+                    {agenda.hasAttended && agenda.hasPostTest && (
+                      agenda.hasTakenPostTest ? (
+                        <div className="flex items-center justify-center gap-1.5 text-indigo-700 font-extrabold bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200 shadow-sm text-xs md:text-sm">
+                          <Award className="w-4 h-4" />
+                          <span>Skor Post-Test: {agenda.postTestScore}</span>
+                          {agenda.gainScore !== null && (
+                            <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-black ${
+                              agenda.gainScore >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                            }`}>
+                              {agenda.gainScore > 0 ? `+${agenda.gainScore}` : agenda.gainScore}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startKuis(agenda, 'POST_TEST')}
+                          disabled={agenda.hasPreTest && !agenda.hasTakenPreTest}
+                          title={agenda.hasPreTest && !agenda.hasTakenPreTest ? 'Selesaikan Pre-Test terlebih dahulu' : 'Mulai Post-Test'}
+                          className={`flex items-center justify-center gap-1.5 font-bold px-4 py-2 rounded-xl transition-all text-xs md:text-sm cursor-pointer ${
+                            agenda.hasPreTest && !agenda.hasTakenPreTest
+                              ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                              : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-md'
+                          }`}
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span>{agenda.hasPreTest && !agenda.hasTakenPreTest ? 'Selesaikan Pre-Test Dulu' : 'Mulai Post-Test'}</span>
+                        </button>
+                      )
                     )}
                   </div>
                 </div>
@@ -243,7 +283,7 @@ export default function EtoserPresensiPage() {
           <div onClick={(e) => e.stopPropagation()} className="bg-white/95 backdrop-blur-md border border-slate-100 rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-300 relative cursor-default">
             <button 
               onClick={() => setIsKuisModalOpen(false)} 
-              className="absolute right-6 top-6 p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors text-slate-700"
+              className="absolute right-6 top-6 p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors text-slate-700 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -254,8 +294,12 @@ export default function EtoserPresensiPage() {
                   <Award className="w-10 h-10" />
                 </div>
                 <div>
-                  <h3 className="text-3xl font-black text-slate-900">Kuis Selesai!</h3>
-                  <p className="text-slate-500 font-medium mt-2">Terima kasih telah mengerjakan post test untuk agenda {activeKuis.name}.</p>
+                  <h3 className="text-3xl font-black text-slate-900">
+                    {activeKuisType === 'PRE_TEST' ? 'Pre-Test Selesai!' : 'Post-Test Selesai!'}
+                  </h3>
+                  <p className="text-slate-500 font-medium mt-2">
+                    Terima kasih telah mengerjakan {activeKuisType === 'PRE_TEST' ? 'Pre-Test' : 'Post-Test'} untuk agenda {activeKuis.name}.
+                  </p>
                 </div>
                 <div className="inline-block bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-3xl px-10 py-6 shadow-xl">
                   <p className="text-sm font-bold uppercase tracking-wider opacity-80">Skor Anda</p>
@@ -265,7 +309,7 @@ export default function EtoserPresensiPage() {
                 <div>
                   <button 
                     onClick={() => setIsKuisModalOpen(false)}
-                    className="bg-slate-950 hover:bg-slate-900 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-all"
+                    className="bg-slate-950 hover:bg-slate-900 text-white font-bold py-3 px-8 rounded-xl shadow-md transition-all cursor-pointer"
                   >
                     Tutup Halaman
                   </button>
@@ -274,7 +318,13 @@ export default function EtoserPresensiPage() {
             ) : (
               <div className="space-y-6">
                 <div>
-                  <span className="text-xs font-black uppercase tracking-wider text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-lg">POST TEST</span>
+                  <span className={`text-xs font-black uppercase tracking-wider px-3 py-1 rounded-lg border ${
+                    activeKuisType === 'PRE_TEST'
+                      ? 'text-sky-700 bg-sky-50 border-sky-200'
+                      : 'text-indigo-600 bg-indigo-50 border-indigo-100'
+                  }`}>
+                    {activeKuisType === 'PRE_TEST' ? 'PRE-TEST' : 'POST-TEST'}
+                  </span>
                   <h3 className="text-2xl font-black text-slate-900 mt-2">{activeKuis.name}</h3>
                   <p className="text-slate-500 text-sm font-semibold mt-1">Harap jawab seluruh pertanyaan di bawah ini dengan jujur.</p>
                 </div>
@@ -294,7 +344,7 @@ export default function EtoserPresensiPage() {
                               key={optIdx}
                               type="button"
                               onClick={() => setKuisAnswers(prev => ({ ...prev, [q.id]: String(optIdx) }))}
-                              className={`text-left p-4 rounded-2xl border text-sm font-semibold transition-all flex items-center justify-between ${
+                              className={`text-left p-4 rounded-2xl border text-sm font-semibold transition-all flex items-center justify-between cursor-pointer ${
                                 isSelected 
                                   ? 'bg-indigo-500 border-indigo-600 text-white shadow-md shadow-indigo-500/20' 
                                   : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70 hover:border-slate-300'
@@ -322,9 +372,11 @@ export default function EtoserPresensiPage() {
                     <button
                       type="submit"
                       disabled={submittingKuis || Object.keys(kuisAnswers).length < kuisQuestions.length}
-                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-2xl shadow-lg hover:shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-2xl shadow-lg hover:shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
                     >
-                      {submittingKuis ? 'Mengirimkan Jawaban...' : 'Kirim Jawaban Post Test'}
+                      {submittingKuis
+                        ? 'Mengirimkan Jawaban...'
+                        : `Kirim Jawaban ${activeKuisType === 'PRE_TEST' ? 'Pre-Test' : 'Post-Test'}`}
                     </button>
                   )}
                 </form>

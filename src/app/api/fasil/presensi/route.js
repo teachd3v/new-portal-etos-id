@@ -25,7 +25,8 @@ export async function GET(req) {
       id: users.id,
       name: users.name,
       angkatan: users.angkatan,
-      wilayah: users.wilayah
+      wilayah: users.wilayah,
+      role: users.role
     }).from(users).where(
       and(
         inArray(users.role, ['PM', 'Etoser']),
@@ -35,66 +36,100 @@ export async function GET(req) {
 
     const etoserIds = etosers.map(e => e.id);
 
-    // 3. Get active agendas for ETOSER or SEMUA
-    const activeAgendas = await db.select().from(agendas).where(
-      and(
-        eq(agendas.is_active, true),
-        or(
-          eq(agendas.target_role, 'ETOSER'),
-          eq(agendas.target_role, 'SEMUA'),
-          isNull(agendas.target_role)
-        )
-      )
+    // 3. Get all agendas (for Skor & Kelola Agenda) and active agendas for ETOSER or SEMUA
+    const allAgendasRaw = await db.select().from(agendas);
+    const activeAgendas = allAgendasRaw.filter(
+      a => a.is_active && (!a.target_role || a.target_role === 'ETOSER' || a.target_role === 'SEMUA')
+    );
+    const etoserTargetAgendas = allAgendasRaw.filter(
+      a => !a.target_role || a.target_role === 'ETOSER' || a.target_role === 'SEMUA'
     );
 
-    // 4. Get attendance for these etosers and agendas
+    // 4. Fetch all questions and attempts
+    const questions = await db.select().from(post_test_questions);
+    const allAttempts = await db.select().from(post_test_attempts);
+
+    // 5. Get attendance for these etosers across agendas
     let attendanceRecords = [];
-    if (etoserIds.length > 0 && activeAgendas.length > 0) {
+    if (etoserIds.length > 0 && etoserTargetAgendas.length > 0) {
       attendanceRecords = await db.select().from(attendance).where(
         and(
           inArray(attendance.pm_id, etoserIds),
-          inArray(attendance.agenda_id, activeAgendas.map(a => a.id))
+          inArray(attendance.agenda_id, etoserTargetAgendas.map(a => a.id))
         )
       );
     }
 
-    // 5. Structure data for binaan monitoring
-    const summary = activeAgendas.map(agenda => {
+    const buildAgendaSummary = (agendaList) => agendaList.map(agenda => {
       const attendees = attendanceRecords.filter(a => a.agenda_id === agenda.id).map(a => a.pm_id);
-      
-      const etoserStatus = etosers.map(etoser => ({
-        ...etoser,
-        hadir: attendees.includes(etoser.id)
-      }));
+      const agendaQs = questions.filter(q => q.agenda_id === agenda.id);
+      const preTestCount = agendaQs.filter(q => (q.test_type || 'POST_TEST').toUpperCase() === 'PRE_TEST').length;
+      const postTestCount = agendaQs.filter(q => (q.test_type || 'POST_TEST').toUpperCase() === 'POST_TEST').length;
+      const agendaAttempts = allAttempts.filter(a => a.agenda_id === agenda.id);
+
+      const etoserStatus = etosers.map(etoser => {
+        const preAttempt = agendaAttempts.find(
+          a => a.user_id === etoser.id && (a.test_type || 'POST_TEST').toUpperCase() === 'PRE_TEST'
+        );
+        const postAttempt = agendaAttempts.find(
+          a => a.user_id === etoser.id && (a.test_type || 'POST_TEST').toUpperCase() === 'POST_TEST'
+        );
+        const preScore = preAttempt ? Math.round(preAttempt.score) : null;
+        const postScore = postAttempt ? Math.round(postAttempt.score) : null;
+        const gainScore = preScore !== null && postScore !== null ? postScore - preScore : null;
+
+        return {
+          ...etoser,
+          hadir: attendees.includes(etoser.id),
+          hasTakenPreTest: !!preAttempt,
+          preTestScore: preScore,
+          hasTakenPostTest: !!postAttempt,
+          postTestScore: postScore,
+          gainScore,
+        };
+      });
+
+      const preScores = etoserStatus.filter(p => p.preTestScore !== null).map(p => p.preTestScore);
+      const postScores = etoserStatus.filter(p => p.postTestScore !== null).map(p => p.postTestScore);
+      const gainScores = etoserStatus.filter(p => p.gainScore !== null).map(p => p.gainScore);
+
+      const avgPreTest = preScores.length > 0 ? Math.round((preScores.reduce((a, b) => a + b, 0) / preScores.length) * 10) / 10 : null;
+      const avgPostTest = postScores.length > 0 ? Math.round((postScores.reduce((a, b) => a + b, 0) / postScores.length) * 10) / 10 : null;
+      const avgGain = gainScores.length > 0 ? Math.round((gainScores.reduce((a, b) => a + b, 0) / gainScores.length) * 10) / 10 : null;
 
       return {
-        agenda: agenda,
+        agenda: {
+          ...agenda,
+          preTestCount,
+          postTestCount,
+          hasPreTest: preTestCount > 0,
+          hasPostTest: postTestCount > 0,
+        },
         totalEtoser: etosers.length,
         totalHadir: attendees.length,
-        etoserStatus: etoserStatus
+        totalPreTest: preScores.length,
+        totalPostTest: postScores.length,
+        avgPreTest,
+        avgPostTest,
+        avgGain,
+        etoserStatus
       };
     });
 
+    const summary = buildAgendaSummary(activeAgendas);
+    const allBinaanSummary = buildAgendaSummary(etoserTargetAgendas);
+
     // 6. Get active agendas targeted to FASILITATOR or SEMUA
-    const fasilAgendasRaw = await db.select().from(agendas).where(
-      and(
-        eq(agendas.is_active, true),
-        or(
-          eq(agendas.target_role, 'FASILITATOR'),
-          eq(agendas.target_role, 'SEMUA')
-        )
-      )
+    const fasilAgendasRaw = allAgendasRaw.filter(
+      a => a.is_active && (a.target_role === 'FASILITATOR' || a.target_role === 'SEMUA')
     );
 
     // Get Fasil's own attendance records
     const fasilAttendance = await db.select().from(attendance).where(eq(attendance.pm_id, decoded.id));
     const attendedFasilAgendaIds = fasilAttendance.map(a => a.agenda_id);
 
-    // Fetch all post test questions to check if kuis exists
-    const questions = await db.select().from(post_test_questions);
-    
-    // Fetch attempts for this Fasil user
-    const attempts = await db.select().from(post_test_attempts).where(eq(post_test_attempts.user_id, decoded.id));
+    // Attempts for this Fasil user
+    const fasilUserAttempts = allAttempts.filter(a => a.user_id === decoded.id);
 
     const now = new Date();
     const fasilAgendas = fasilAgendasRaw.map(agenda => {
@@ -107,23 +142,52 @@ export async function GET(req) {
         is_open_now = now >= startDateTime && now <= endDateTime;
       }
 
-      const hasPostTest = questions.some(q => q.agenda_id === agenda.id);
-      const attempt = attempts.find(a => a.agenda_id === agenda.id);
+      const agendaQs = questions.filter(q => q.agenda_id === agenda.id);
+      const hasPreTest = agendaQs.some(q => (q.test_type || 'POST_TEST').toUpperCase() === 'PRE_TEST');
+      const hasPostTest = agendaQs.some(q => (q.test_type || 'POST_TEST').toUpperCase() === 'POST_TEST');
+
+      const preAttempt = fasilUserAttempts.find(
+        a => a.agenda_id === agenda.id && (a.test_type || 'POST_TEST').toUpperCase() === 'PRE_TEST'
+      );
+      const postAttempt = fasilUserAttempts.find(
+        a => a.agenda_id === agenda.id && (a.test_type || 'POST_TEST').toUpperCase() === 'POST_TEST'
+      );
+
+      const preScore = preAttempt ? Math.round(preAttempt.score) : null;
+      const postScore = postAttempt ? Math.round(postAttempt.score) : null;
+      const gainScore = preScore !== null && postScore !== null ? postScore - preScore : null;
 
       return {
         ...agenda,
         hasAttended: attendedFasilAgendaIds.includes(agenda.id),
         is_open_now,
+        hasPreTest,
+        hasTakenPreTest: !!preAttempt,
+        preTestScore: preScore,
         hasPostTest,
-        hasTakenPostTest: !!attempt,
-        postTestScore: attempt ? Math.round(attempt.score) : null
+        hasTakenPostTest: !!postAttempt,
+        postTestScore: postScore,
+        gainScore,
+      };
+    });
+
+    // 7. Enriched agendas list for Fasil agenda setup (especially Wilayah agendas)
+    const managedAgendas = allAgendasRaw.map(agenda => {
+      const agendaQs = questions.filter(q => q.agenda_id === agenda.id);
+      return {
+        ...agenda,
+        preTestCount: agendaQs.filter(q => (q.test_type || 'POST_TEST').toUpperCase() === 'PRE_TEST').length,
+        postTestCount: agendaQs.filter(q => (q.test_type || 'POST_TEST').toUpperCase() === 'POST_TEST').length,
       };
     });
 
     return NextResponse.json({ 
-      success: true, 
+      success: true,
+      wilayah: fasil.wilayah,
       data: summary,
-      fasilAgendas: fasilAgendas 
+      allBinaanSummary,
+      fasilAgendas,
+      managedAgendas,
     });
   } catch (error) {
     console.error("Presensi Error:", error);
