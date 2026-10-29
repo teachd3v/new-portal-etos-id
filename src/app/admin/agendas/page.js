@@ -66,15 +66,15 @@ function AssignmentBuilderSection({ formData, setFormData }) {
           <h4 className="font-bold text-teal-950 text-base">Setup Penugasan Agenda (Opsional)</h4>
         </div>
         <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
-          File & Tautan Link
+          Opsional (File, Link, atau Instruksi Saja)
         </span>
       </div>
       <p className="text-xs text-teal-800/70">
-        Lampirkan petunjuk atau bahan penugasan yang wajib dikumpulkan oleh peserta melalui file dan/atau tautan link.
+        Tulis instruksi penugasan di bawah ini. Jika ada dokumen lembar kerja atau tautan materi, silakan lampirkan (pilih salah satu, keduanya, atau cukup instruksi saja).
       </p>
 
       <div>
-        <label className="block text-xs font-bold text-teal-900 mb-1">Judul / Instruksi Penugasan</label>
+        <label className="block text-xs font-bold text-teal-900 mb-1">Judul / Instruksi Penugasan (Opsional)</label>
         <textarea
           value={formData.assignment_title || ""}
           onChange={(e) => setFormData(prev => ({ ...prev, assignment_title: e.target.value }))}
@@ -87,7 +87,7 @@ function AssignmentBuilderSection({ formData, setFormData }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Metode 1: File */}
         <div className="p-3.5 bg-teal-50/50 border border-teal-100 rounded-2xl space-y-2">
-          <label className="block text-xs font-bold text-teal-900">1. Unggah File Panduan / Lembar Kerja</label>
+          <label className="block text-xs font-bold text-teal-900">1. Unggah File Panduan / Lembar Kerja (Opsional)</label>
           {formData.assignment_file_name ? (
             <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-teal-200">
               <div className="flex items-center gap-2 min-w-0 pr-2">
@@ -115,7 +115,7 @@ function AssignmentBuilderSection({ formData, setFormData }) {
 
         {/* Metode 2: Link */}
         <div className="p-3.5 bg-teal-50/50 border border-teal-100 rounded-2xl space-y-2">
-          <label className="block text-xs font-bold text-teal-900">2. Tautan Link Penugasan</label>
+          <label className="block text-xs font-bold text-teal-900">2. Tautan Link Penugasan (Opsional)</label>
           <div className="relative">
             <ExternalLink className="w-4 h-4 text-teal-600 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -381,11 +381,16 @@ function AdminAgendasContent() {
           formData.assignment_title || formData.assignment_link || formData.assignment_file_name;
 
         if (hasContent) {
-          localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+          // Exclude large base64 assignment_file_url from localStorage to prevent browser storage quota crash
+          const draftToSave = {
+            ...formData,
+            assignment_file_url: ""
+          };
+          localStorage.setItem(DRAFT_KEY, JSON.stringify(draftToSave));
           setHasDraft(true);
         }
       } catch (e) {
-        console.error("Failed to save draft", e);
+        console.warn("Could not save agenda draft to localStorage:", e);
       }
     }
   }, [formData, isAddModalOpen]);

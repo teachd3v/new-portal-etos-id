@@ -65,15 +65,15 @@ function FasilAssignmentBuilder({ formData, setFormData }) {
           <h4 className="font-bold text-slate-900 text-sm md:text-base">Setup Penugasan Agenda (Opsional)</h4>
         </div>
         <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-orange-100 text-orange-800 border border-orange-200">
-          File & Link
+          Opsional (File, Link, atau Instruksi Saja)
         </span>
       </div>
       <p className="text-xs text-slate-500">
-        Lampirkan petunjuk atau file lembar kerja penugasan untuk dikerjakan Etoser binaan.
+        Tulis instruksi penugasan untuk etoser binaan. Kamu juga bisa melampirkan lembar tugas atau tautan materi (opsional/salah satu saja atau cukup instruksi saja).
       </p>
 
       <div>
-        <label className="block text-xs font-bold text-slate-700 mb-1">Judul / Instruksi Penugasan</label>
+        <label className="block text-xs font-bold text-slate-700 mb-1">Judul / Instruksi Penugasan (Opsional)</label>
         <textarea
           value={formData.assignment_title || ""}
           onChange={(e) => setFormData(prev => ({ ...prev, assignment_title: e.target.value }))}
@@ -85,7 +85,7 @@ function FasilAssignmentBuilder({ formData, setFormData }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
         <div className="p-3 bg-orange-50/40 border border-orange-100 rounded-2xl space-y-2">
-          <label className="block text-xs font-bold text-slate-700">1. Unggah File Panduan / Lembar Kerja</label>
+          <label className="block text-xs font-bold text-slate-700">1. Unggah File Panduan / Lembar Kerja (Opsional)</label>
           {formData.assignment_file_name ? (
             <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-orange-200">
               <div className="flex items-center gap-2 min-w-0 pr-2">
@@ -112,7 +112,7 @@ function FasilAssignmentBuilder({ formData, setFormData }) {
         </div>
 
         <div className="p-3 bg-orange-50/40 border border-orange-100 rounded-2xl space-y-2">
-          <label className="block text-xs font-bold text-slate-700">2. Tautan Link Penugasan</label>
+          <label className="block text-xs font-bold text-slate-700">2. Tautan Link Penugasan (Opsional)</label>
           <div className="relative">
             <ExternalLink className="w-4 h-4 text-orange-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -508,11 +508,16 @@ function FasilPresensiContent() {
           agendaForm.assignment_title || agendaForm.assignment_link || agendaForm.assignment_file_name;
 
         if (hasContent) {
-          localStorage.setItem(DRAFT_KEY_FASIL, JSON.stringify(agendaForm));
+          // Exclude large base64 assignment_file_url from localStorage to prevent browser storage quota crash
+          const draftToSave = {
+            ...agendaForm,
+            assignment_file_url: ""
+          };
+          localStorage.setItem(DRAFT_KEY_FASIL, JSON.stringify(draftToSave));
           setHasDraftAgenda(true);
         }
       } catch (e) {
-        console.error("Failed to save fasil draft", e);
+        console.warn("Could not save fasil agenda draft to localStorage:", e);
       }
     }
   }, [agendaForm, isAgendaModalOpen, isEditingAgenda]);

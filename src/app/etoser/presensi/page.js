@@ -110,8 +110,8 @@ export default function EtoserPresensiPage() {
 
   const handleSubmissionSubmit = async (e) => {
     e.preventDefault();
-    if (!submissionForm.file_url && !submissionForm.link_url) {
-      toast.error('Harap unggah file atau cantumkan tautan link penugasan!');
+    if (!submissionForm.file_url && !submissionForm.link_url && !submissionForm.notes?.trim()) {
+      toast.error('Harap unggah file, cantumkan tautan link, atau tuliskan jawaban/catatan tugas!');
       return;
     }
 
@@ -663,7 +663,7 @@ export default function EtoserPresensiPage() {
 
               <button
                 type="submit"
-                disabled={submittingSubmission || (!submissionForm.file_url && !submissionForm.link_url)}
+                disabled={submittingSubmission || (!submissionForm.file_url && !submissionForm.link_url && !submissionForm.notes?.trim())}
                 className="w-full bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl shadow-lg transition-all cursor-pointer text-xs md:text-sm"
               >
                 {submittingSubmission ? 'Mengirim Penugasan...' : 'Simpan & Kumpulkan Penugasan'}

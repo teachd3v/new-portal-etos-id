@@ -45,8 +45,8 @@ export async function POST(req, { params }) {
     }
 
     const { file_name, file_url, link_url, notes } = body;
-    if (!file_url && !link_url) {
-      return NextResponse.json({ error: 'Unggah file atau masukkan tautan link penugasan' }, { status: 400 });
+    if (!file_url && !link_url && (!notes || !notes.trim())) {
+      return NextResponse.json({ error: 'Kumpulkan penugasan melalui file, tautan link, atau catatan jawaban' }, { status: 400 });
     }
 
     const existing = await db.select().from(agenda_submissions).where(
