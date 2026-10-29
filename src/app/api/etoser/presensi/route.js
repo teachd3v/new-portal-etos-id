@@ -115,6 +115,26 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: 'Sesi presensi untuk agenda ini sudah ditutup atau belum dimulai' }), { status: 403 });
     }
 
+    // Check if agenda has Pre-Test and user has completed it
+    const preTestQs = await db.select().from(post_test_questions).where(
+      and(
+        eq(post_test_questions.agenda_id, agenda_id),
+        eq(post_test_questions.test_type, 'PRE_TEST')
+      )
+    );
+    if (preTestQs.length > 0) {
+      const preAttempt = await db.select().from(post_test_attempts).where(
+        and(
+          eq(post_test_attempts.agenda_id, agenda_id),
+          eq(post_test_attempts.user_id, pmId),
+          eq(post_test_attempts.test_type, 'PRE_TEST')
+        )
+      );
+      if (preAttempt.length === 0) {
+        return new Response(JSON.stringify({ error: 'Harap selesaikan Pre-Test terlebih dahulu sebelum melakukan presensi' }), { status: 400 });
+      }
+    }
+
     const existing = await db.select().from(attendance).where(and(eq(attendance.pm_id, pmId), eq(attendance.agenda_id, agenda_id)));
     if (existing.length > 0) {
       return new Response(JSON.stringify({ error: 'Anda sudah melakukan presensi untuk agenda ini' }), { status: 400 });

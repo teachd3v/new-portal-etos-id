@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Calendar, Clock, CheckCircle2, AlertCircle, Loader2, Award,
-  FileText, X, Paperclip, ExternalLink, UploadCloud
+  FileText, X, Paperclip, ExternalLink, UploadCloud, Lock
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -145,7 +145,15 @@ export default function EtoserPresensiPage() {
     }
   };
 
-  const handleHadir = async (agendaId) => {
+  const handleHadir = async (agendaOrId) => {
+    const agendaId = typeof agendaOrId === 'object' ? agendaOrId.id : agendaOrId;
+    const targetAgenda = typeof agendaOrId === 'object' ? agendaOrId : agendas.find(a => a.id === agendaId);
+    
+    if (targetAgenda && targetAgenda.hasPreTest && !targetAgenda.hasTakenPreTest) {
+      toast.error("Harap kerjakan Pre-Test terlebih dahulu sebelum presensi!");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch('/api/etoser/presensi', {
@@ -155,10 +163,11 @@ export default function EtoserPresensiPage() {
       });
 
       if (res.ok) {
-        toast.success("Presensi berhasil dicatat!");
+        toast.success("Presensi berhasil dicatat! Penugasan & Post-Test kini terbuka.");
         setAgendas(agendas.map(a => a.id === agendaId ? { ...a, hasAttended: true } : a));
       } else {
-        toast.error("Gagal mencatat presensi");
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || "Gagal mencatat presensi");
       }
     } catch (e) {
       toast.error("Terjadi kesalahan jaringan");
@@ -268,203 +277,369 @@ export default function EtoserPresensiPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            {agendas.map(agenda => (
-              <div key={agenda.id} className="bg-sky-50/50 border border-sky-100 rounded-xl md:rounded-2xl p-4 md:p-6 hover:shadow-md transition-all relative overflow-hidden group">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-sky-200/30 rounded-full blur-2xl group-hover:bg-sky-300/40 transition-colors pointer-events-none"></div>
-                
-                <div className="relative z-10">
-                  <div className="flex justify-between items-start mb-3 md:mb-4">
-                    <div>
-                      <span className="inline-block px-2.5 py-0.5 md:px-3 md:py-1 bg-sky-100 text-sky-700 font-bold text-[10px] md:text-xs rounded-full mb-1.5 md:mb-2">
-                        {agenda.type}
-                      </span>
-                      <h3 className="text-lg md:text-xl font-black text-sky-950 leading-tight">{agenda.name}</h3>
-                      <p className="text-xs md:text-sm font-medium text-sky-800/80 mt-1">{agenda.theme}</p>
-                    </div>
-                  </div>
+            {agendas.map(agenda => {
+              const needsPreTest = Boolean(agenda.hasPreTest && !agenda.hasTakenPreTest);
+              const isPreTestDone = Boolean(!agenda.hasPreTest || agenda.hasTakenPreTest);
+              const needsAttendance = Boolean(isPreTestDone && !agenda.hasAttended);
+              const isAttended = Boolean(agenda.hasAttended);
+              const hasAssignment = Boolean(agenda.hasAssignment || agenda.assignment_title || agenda.assignment_file_url || agenda.assignment_link || agenda.submission);
 
-                  <div className="space-y-1.5 md:space-y-2 mb-4 md:mb-6">
-                    <div className="flex items-center gap-2 text-xs md:text-sm font-medium text-sky-900/70">
-                      <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4 text-sky-500" />
-                      {agenda.start_date} {agenda.end_date ? `- ${agenda.end_date}` : ''}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs md:text-sm font-medium text-sky-900/70">
-                      <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-500" />
-                      {agenda.start_time} - {agenda.end_time}
-                    </div>
-                  </div>
-
-                  {/* Penugasan Kegiatan Card Section */}
-                  {(agenda.hasAssignment || agenda.assignment_title || agenda.assignment_file_url || agenda.assignment_link || agenda.submission) && (
-                    <div className="mb-4 p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-xl space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-200/80 text-amber-900 inline-flex items-center gap-1">
-                          <Paperclip className="w-3 h-3 text-amber-700" />
-                          Penugasan Kegiatan
+              return (
+                <div key={agenda.id} className="bg-sky-50/50 border border-sky-100 rounded-xl md:rounded-2xl p-4 md:p-6 hover:shadow-md transition-all relative overflow-hidden group">
+                  <div className="absolute -right-4 -top-4 w-24 h-24 bg-sky-200/30 rounded-full blur-2xl group-hover:bg-sky-300/40 transition-colors pointer-events-none"></div>
+                  
+                  <div className="relative z-10 space-y-4">
+                    {/* Header Info */}
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="inline-block px-2.5 py-0.5 md:px-3 md:py-1 bg-sky-100 text-sky-700 font-bold text-[10px] md:text-xs rounded-full mb-1.5 md:mb-2">
+                          {agenda.type}
                         </span>
-                        {agenda.submission ? (
-                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" /> Terkumpul
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
-                            Belum Mengumpulkan
-                          </span>
-                        )}
+                        <h3 className="text-lg md:text-xl font-black text-sky-950 leading-tight">{agenda.name}</h3>
+                        <p className="text-xs md:text-sm font-medium text-sky-800/80 mt-1">{agenda.theme}</p>
                       </div>
+                    </div>
 
-                      {agenda.assignment_title && (
-                        <p className="text-xs font-semibold text-slate-800 leading-relaxed whitespace-pre-wrap">
-                          {agenda.assignment_title}
-                        </p>
+                    {/* Schedule */}
+                    <div className="space-y-1.5 text-xs md:text-sm font-medium text-sky-900/70">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4 text-sky-500" />
+                        <span>{agenda.start_date} {agenda.end_date ? `- ${agenda.end_date}` : ''}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-500" />
+                        <span>{agenda.start_time} - {agenda.end_time}</span>
+                      </div>
+                    </div>
+
+                    {/* Sequential Workflow Indicator */}
+                    <div className="flex items-center justify-between gap-1 p-2 bg-white/70 border border-sky-100 rounded-xl text-[10px] md:text-[11px] font-bold">
+                      {/* Step 1: Pre-Test */}
+                      {agenda.hasPreTest && (
+                        <>
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${
+                            agenda.hasTakenPreTest 
+                              ? 'bg-emerald-100/90 text-emerald-800' 
+                              : 'bg-sky-600 text-white shadow-xs'
+                          }`}>
+                            <span>1. Pre-Test</span>
+                            {agenda.hasTakenPreTest && <CheckCircle2 className="w-3 h-3 text-emerald-700" />}
+                          </div>
+                          <span className="text-slate-300 font-bold">&rarr;</span>
+                        </>
                       )}
 
-                      {/* Panduan / Link dari Admin atau Fasil */}
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        {agenda.assignment_file_url && (
-                          <a
-                            href={agenda.assignment_file_url}
-                            download={agenda.assignment_file_name || 'panduan-penugasan'}
-                            className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-950 bg-white hover:bg-amber-100/70 px-2.5 py-1.5 rounded-lg border border-amber-300 transition-colors cursor-pointer"
-                          >
-                            <Paperclip className="w-3.5 h-3.5 text-amber-700" />
-                            <span>Unduh Panduan Tugas ({agenda.assignment_file_name || 'File'})</span>
-                          </a>
-                        )}
-                        {agenda.assignment_link && (
-                          <a
-                            href={agenda.assignment_link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-900 bg-white hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg border border-indigo-200 transition-colors cursor-pointer"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5 text-indigo-700" />
-                            <span>Buka Link Penugasan &rarr;</span>
-                          </a>
-                        )}
+                      {/* Step 2: Presensi */}
+                      <div className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${
+                        agenda.hasAttended
+                          ? 'bg-emerald-100/90 text-emerald-800'
+                          : needsAttendance
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'text-slate-400 bg-slate-100'
+                      }`}>
+                        <span>{agenda.hasPreTest ? '2.' : '1.'} Presensi</span>
+                        {agenda.hasAttended && <CheckCircle2 className="w-3 h-3 text-emerald-700" />}
                       </div>
 
-                      {/* Detail Pengumpulan Peserta */}
-                      {agenda.submission && (
-                        <div className="mt-2 pt-2 border-t border-amber-200/60 text-xs text-slate-700 space-y-1">
-                          <p className="text-[11px] font-bold text-amber-900">Pengumpulan Tugas Kamu:</p>
-                          {agenda.submission.file_url && (
-                            <a
-                              href={agenda.submission.file_url}
-                              download={agenda.submission.file_name || 'tugas-saya'}
-                              className="text-xs font-semibold text-teal-800 hover:underline flex items-center gap-1.5"
-                            >
-                              <Paperclip className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-                              <span className="truncate">{agenda.submission.file_name || 'Unduh File Tugas Saya'}</span>
-                            </a>
-                          )}
-                          {agenda.submission.link_url && (
-                            <a
-                              href={agenda.submission.link_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs font-semibold text-indigo-800 hover:underline flex items-center gap-1.5"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                              <span className="truncate">{agenda.submission.link_url}</span>
-                            </a>
-                          )}
-                          {agenda.submission.notes && (
-                            <p className="text-[11px] text-slate-600 italic">Catatan: {agenda.submission.notes}</p>
-                          )}
+                      {/* Step 3: Tugas / Post-Test */}
+                      {(hasAssignment || agenda.hasPostTest) && (
+                        <>
+                          <span className="text-slate-300 font-bold">&rarr;</span>
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${
+                            isAttended
+                              ? 'bg-amber-100/90 text-amber-900 border border-amber-200'
+                              : 'text-slate-400 bg-slate-100'
+                          }`}>
+                            <span>
+                              {agenda.hasPreTest ? '3.' : '2.'}{' '}
+                              {hasAssignment && agenda.hasPostTest
+                                ? 'Tugas & Post-Test'
+                                : hasAssignment
+                                ? 'Penugasan'
+                                : 'Post-Test'}
+                            </span>
+                            {isAttended && (agenda.submission || (agenda.hasPostTest && agenda.hasTakenPostTest)) && (
+                              <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* ============================================================ */}
+                    {/* TAHAP 1: PRE-TEST (Hanya jika ada Pre-Test & belum selesai) */}
+                    {/* ============================================================ */}
+                    {needsPreTest && (
+                      <div className="p-4 bg-sky-100/80 border border-sky-300/80 rounded-2xl space-y-3 shadow-xs animate-in fade-in">
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 bg-sky-600 text-white rounded-xl shrink-0">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-sky-800 bg-sky-200/90 px-2 py-0.5 rounded-md">
+                              Tahap 1: Wajib Pre-Test
+                            </span>
+                            <h4 className="text-sm font-black text-sky-950 mt-1">
+                              Kerjakan Pre-Test Sebelum Kegiatan
+                            </h4>
+                            <p className="text-xs text-sky-900/80 mt-0.5 leading-relaxed">
+                              Anda wajib menyelesaikan soal Pre-Test terlebih dahulu untuk membuka sesi presensi kehadiran agenda ini.
+                            </p>
+                          </div>
                         </div>
-                      )}
 
-                      {/* Tombol Kumpulkan / Ubah Penugasan */}
-                      <div className="pt-1">
                         <button
                           type="button"
-                          onClick={() => openSubmissionModal(agenda)}
-                          className={`w-full py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                            agenda.submission
-                              ? 'bg-amber-200 hover:bg-amber-300 text-amber-950 border border-amber-300'
-                              : 'bg-amber-600 hover:bg-amber-700 text-white shadow-sm'
-                          }`}
-                        >
-                          <UploadCloud className="w-4 h-4" />
-                          <span>{agenda.submission ? 'Ubah / Perbarui Penugasan' : 'Unggah / Kumpulkan Penugasan'}</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="pt-3 md:pt-4 border-t border-sky-200/50 flex flex-wrap gap-2.5 items-center justify-between">
-                    {/* 1. Pre-Test (Accessible before/during attendance) */}
-                    {agenda.hasPreTest && (
-                      agenda.hasTakenPreTest ? (
-                        <div className="flex items-center justify-center gap-1.5 text-sky-700 font-extrabold bg-sky-100/80 px-3 py-1.5 rounded-xl border border-sky-200 shadow-xs text-xs md:text-sm">
-                          <Award className="w-4 h-4" />
-                          <span>Skor Pre-Test: {agenda.preTestScore}</span>
-                        </div>
-                      ) : (
-                        <button
                           onClick={() => startKuis(agenda, 'PRE_TEST')}
-                          className="flex items-center justify-center gap-1.5 font-bold px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white shadow-sm transition-all text-xs md:text-sm cursor-pointer"
+                          className="w-full py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs md:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer hover:shadow"
                         >
                           <FileText className="w-4 h-4" />
-                          <span>Mulai Pre-Test</span>
+                          <span>Mulai Pengerjaan Pre-Test &rarr;</span>
                         </button>
-                      )
-                    )}
-
-                    {/* 2. Attendance Button / Status */}
-                    {agenda.hasAttended ? (
-                      <div className="flex items-center justify-center gap-1.5 text-emerald-600 font-bold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 shadow-sm text-xs md:text-sm">
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Sudah Presensi</span>
                       </div>
-                    ) : (
-                      <button 
-                        onClick={() => handleHadir(agenda.id)}
-                        disabled={submitting || !agenda.is_open_now}
-                        className={`flex items-center justify-center gap-1.5 font-bold px-4 py-2 rounded-xl shadow-sm transition-all text-xs md:text-sm cursor-pointer ${
-                          !agenda.is_open_now ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                        }`}
-                      >
-                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertCircle className="w-4 h-4" />}
-                        <span>{agenda.is_open_now ? 'Klik Hadir' : 'Belum Waktunya / Ditutup'}</span>
-                      </button>
                     )}
 
-                    {/* 3. Post-Test (Unlocked after Klik Hadir & Pre-Test if any) */}
-                    {agenda.hasAttended && agenda.hasPostTest && (
-                      agenda.hasTakenPostTest ? (
-                        <div className="flex items-center justify-center gap-1.5 text-indigo-700 font-extrabold bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200 shadow-sm text-xs md:text-sm">
-                          <Award className="w-4 h-4" />
-                          <span>Skor Post-Test: {agenda.postTestScore}</span>
-                          {agenda.gainScore !== null && (
-                            <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-black ${
-                              agenda.gainScore >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                            }`}>
-                              {agenda.gainScore > 0 ? `+${agenda.gainScore}` : agenda.gainScore}
+                    {/* ============================================================ */}
+                    {/* TAHAP 2: PRESENSI KEHADIRAN (Pre-Test selesai & belum presensi) */}
+                    {/* ============================================================ */}
+                    {needsAttendance && (
+                      <div className="space-y-3 animate-in fade-in">
+                        {agenda.hasTakenPreTest && (
+                          <div className="flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200/80 rounded-xl text-xs font-bold text-emerald-800">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                              <span>Pre-Test Selesai</span>
+                            </div>
+                            <span className="bg-emerald-200/70 text-emerald-950 px-2.5 py-0.5 rounded-lg text-xs font-black">
+                              Skor: {agenda.preTestScore}
                             </span>
+                          </div>
+                        )}
+
+                        <div className="p-4 bg-indigo-50/80 border border-indigo-200 rounded-2xl space-y-3 shadow-xs">
+                          <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded-xl shrink-0 ${agenda.is_open_now ? 'bg-indigo-600 text-white' : 'bg-slate-300 text-slate-600'}`}>
+                              <AlertCircle className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-black uppercase tracking-wider text-indigo-800 bg-indigo-200/80 px-2 py-0.5 rounded-md">
+                                {agenda.hasPreTest ? 'Tahap 2: Presensi Kehadiran' : 'Presensi Kehadiran'}
+                              </span>
+                              <h4 className="text-sm font-black text-indigo-950 mt-1">
+                                {agenda.is_open_now ? 'Sesi Presensi Dibuka' : 'Jadwal Presensi'}
+                              </h4>
+                              <p className="text-xs text-indigo-900/80 mt-0.5 leading-relaxed">
+                                {agenda.is_open_now
+                                  ? 'Silakan catat kehadiran Anda. Setelah presensi, keterangan penugasan dan materi kegiatan akan otomatis terbuka.'
+                                  : `Presensi hanya dapat dilakukan pada jadwal kegiatan (${agenda.start_time} - ${agenda.end_time}).`}
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleHadir(agenda)}
+                            disabled={submitting || !agenda.is_open_now}
+                            className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                              !agenda.is_open_now
+                                ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-lg'
+                            }`}
+                          >
+                            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                            <span>{agenda.is_open_now ? 'Klik Hadir Sekarang' : 'Belum Waktunya / Sesi Ditutup'}</span>
+                          </button>
+                        </div>
+
+                        {(hasAssignment || agenda.hasPostTest) && (
+                          <div className="p-3 bg-slate-100/90 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-500 font-semibold flex items-center justify-center gap-2">
+                            <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span>
+                              {hasAssignment && agenda.hasPostTest
+                                ? 'Keterangan penugasan & Post-Test akan terbuka setelah Anda melakukan presensi.'
+                                : hasAssignment
+                                ? 'Keterangan penugasan kegiatan akan terbuka setelah Anda melakukan presensi.'
+                                : 'Post-Test kegiatan akan terbuka setelah Anda melakukan presensi.'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ============================================================ */}
+                    {/* TAHAP 3: SUDAH PRESENSI -> PENUGASAN & POST-TEST TERBUKA */}
+                    {/* ============================================================ */}
+                    {isAttended && (
+                      <div className="space-y-3.5 animate-in fade-in">
+                        {/* Status Bar: Presensi & Pre-Test */}
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <div className="flex items-center gap-1.5 text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs shadow-xs">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                            <span>Sudah Presensi</span>
+                          </div>
+
+                          {agenda.hasTakenPreTest && (
+                            <div className="flex items-center gap-1.5 text-sky-700 font-bold bg-sky-50 border border-sky-200 px-3 py-1.5 rounded-xl text-xs shadow-xs">
+                              <Award className="w-4 h-4 text-sky-600" />
+                              <span>Skor Pre-Test: {agenda.preTestScore}</span>
+                            </div>
                           )}
                         </div>
-                      ) : (
-                        <button
-                          onClick={() => startKuis(agenda, 'POST_TEST')}
-                          disabled={agenda.hasPreTest && !agenda.hasTakenPreTest}
-                          title={agenda.hasPreTest && !agenda.hasTakenPreTest ? 'Selesaikan Pre-Test terlebih dahulu' : 'Mulai Post-Test'}
-                          className={`flex items-center justify-center gap-1.5 font-bold px-4 py-2 rounded-xl transition-all text-xs md:text-sm cursor-pointer ${
-                            agenda.hasPreTest && !agenda.hasTakenPreTest
-                              ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                              : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-md'
-                          }`}
-                        >
-                          <FileText className="w-4 h-4" />
-                          <span>{agenda.hasPreTest && !agenda.hasTakenPreTest ? 'Selesaikan Pre-Test Dulu' : 'Mulai Post-Test'}</span>
-                        </button>
-                      )
+
+                        {/* Penugasan Kegiatan Card */}
+                        {hasAssignment && (
+                          <div className="p-3.5 bg-amber-50/80 border border-amber-200/90 rounded-2xl space-y-2.5 shadow-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-200/80 text-amber-900 inline-flex items-center gap-1">
+                                <Paperclip className="w-3 h-3 text-amber-700" />
+                                Penugasan Kegiatan
+                              </span>
+                              {agenda.submission ? (
+                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3" /> Terkumpul
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                                  Belum Mengumpulkan
+                                </span>
+                              )}
+                            </div>
+
+                            {agenda.assignment_title && (
+                              <p className="text-xs font-semibold text-slate-800 leading-relaxed whitespace-pre-wrap">
+                                {agenda.assignment_title}
+                              </p>
+                            )}
+
+                            {/* Panduan / Link dari Admin atau Fasil */}
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              {agenda.assignment_file_url && (
+                                <a
+                                  href={agenda.assignment_file_url}
+                                  download={agenda.assignment_file_name || 'panduan-penugasan'}
+                                  className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-950 bg-white hover:bg-amber-100/70 px-2.5 py-1.5 rounded-lg border border-amber-300 transition-colors cursor-pointer"
+                                >
+                                  <Paperclip className="w-3.5 h-3.5 text-amber-700" />
+                                  <span>Unduh Panduan Tugas ({agenda.assignment_file_name || 'File'})</span>
+                                </a>
+                              )}
+                              {agenda.assignment_link && (
+                                <a
+                                  href={agenda.assignment_link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-900 bg-white hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg border border-indigo-200 transition-colors cursor-pointer"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5 text-indigo-700" />
+                                  <span>Buka Link Penugasan &rarr;</span>
+                                </a>
+                              )}
+                            </div>
+
+                            {/* Detail Pengumpulan Peserta */}
+                            {agenda.submission && (
+                              <div className="mt-2 pt-2 border-t border-amber-200/60 text-xs text-slate-700 space-y-1">
+                                <p className="text-[11px] font-bold text-amber-900">Pengumpulan Tugas Kamu:</p>
+                                {agenda.submission.file_url && (
+                                  <a
+                                    href={agenda.submission.file_url}
+                                    download={agenda.submission.file_name || 'tugas-saya'}
+                                    className="text-xs font-semibold text-teal-800 hover:underline flex items-center gap-1.5"
+                                  >
+                                    <Paperclip className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                                    <span className="truncate">{agenda.submission.file_name || 'Unduh File Tugas Saya'}</span>
+                                  </a>
+                                )}
+                                {agenda.submission.link_url && (
+                                  <a
+                                    href={agenda.submission.link_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs font-semibold text-indigo-800 hover:underline flex items-center gap-1.5"
+                                  >
+                                    <ExternalLink className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                    <span className="truncate">{agenda.submission.link_url}</span>
+                                  </a>
+                                )}
+                                {agenda.submission.notes && (
+                                  <p className="text-[11px] text-slate-600 italic">Catatan: {agenda.submission.notes}</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Tombol Kumpulkan / Ubah Penugasan */}
+                            <div className="pt-1">
+                              <button
+                                type="button"
+                                onClick={() => openSubmissionModal(agenda)}
+                                className={`w-full py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                                  agenda.submission
+                                    ? 'bg-amber-200 hover:bg-amber-300 text-amber-950 border border-amber-300'
+                                    : 'bg-amber-600 hover:bg-amber-700 text-white shadow-sm'
+                                }`}
+                              >
+                                <UploadCloud className="w-4 h-4" />
+                                <span>{agenda.submission ? 'Ubah / Perbarui Penugasan' : 'Unggah / Kumpulkan Penugasan'}</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Post-Test Section */}
+                        {agenda.hasPostTest && (
+                          <div className="pt-1">
+                            {agenda.hasTakenPostTest ? (
+                              <div className="flex items-center justify-between p-3 bg-indigo-50/80 border border-indigo-200 rounded-xl text-indigo-900 text-xs font-bold">
+                                <div className="flex items-center gap-2">
+                                  <Award className="w-4 h-4 text-indigo-600" />
+                                  <span>Post-Test Selesai • Skor: {agenda.postTestScore}</span>
+                                </div>
+                                {agenda.gainScore !== null && (
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                                    agenda.gainScore >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                                  }`}>
+                                    Gain: {agenda.gainScore > 0 ? `+${agenda.gainScore}` : agenda.gainScore}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="p-3.5 bg-orange-50/80 border border-orange-200 rounded-xl space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-orange-100 text-orange-900 inline-flex items-center gap-1">
+                                    <FileText className="w-3 h-3 text-orange-700" /> Post-Test Kegiatan
+                                  </span>
+                                  <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                                    Belum Dikerjakan
+                                  </span>
+                                </div>
+                                <p className="text-xs text-orange-950 font-medium">
+                                  Selesaikan Post-Test untuk mengukur pemahaman materi setelah mengikuti kegiatan.
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => startKuis(agenda, 'POST_TEST')}
+                                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs md:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer hover:shadow"
+                                >
+                                  <FileText className="w-4 h-4" />
+                                  <span>Mulai Kerjakan Post-Test &rarr;</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {!hasAssignment && !agenda.hasPostTest && (
+                          <div className="p-3 bg-emerald-50/70 border border-emerald-200/80 rounded-xl text-xs text-emerald-800 font-bold flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                            <span>Presensi telah tercatat. Rangkaian agenda ini telah selesai.</span>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
