@@ -35,75 +35,71 @@ export async function PUT(req, { params }) {
     const { id } = await params;
     const body = await req.json();
     
-    const result = await db.transaction(async (tx) => {
-      const updatePayload = {
-        name: body.name,
-        type: body.type,
-        activity_type: body.activity_type || null,
-        theme: body.theme || null,
-        start_date: body.start_date || null,
-        end_date: body.end_date || null,
-        start_time: body.start_time || null,
-        end_time: body.end_time || null,
-        is_active: body.is_active,
-        target_role: body.target_role || 'ETOSER',
-      };
+    const updatePayload = {
+      name: body.name,
+      type: body.type,
+      activity_type: body.activity_type || null,
+      theme: body.theme || null,
+      start_date: body.start_date || null,
+      end_date: body.end_date || null,
+      start_time: body.start_time || null,
+      end_time: body.end_time || null,
+      is_active: body.is_active,
+      target_role: body.target_role || 'ETOSER',
+    };
 
-      if (body.assignment_title !== undefined) updatePayload.assignment_title = body.assignment_title || null;
-      if (body.assignment_file_name !== undefined) updatePayload.assignment_file_name = body.assignment_file_name || null;
-      if (body.assignment_file_url !== undefined) updatePayload.assignment_file_url = body.assignment_file_url || null;
-      if (body.assignment_link !== undefined) updatePayload.assignment_link = body.assignment_link || null;
+    if (body.assignment_title !== undefined) updatePayload.assignment_title = body.assignment_title || null;
+    if (body.assignment_file_name !== undefined) updatePayload.assignment_file_name = body.assignment_file_name || null;
+    if (body.assignment_file_url !== undefined) updatePayload.assignment_file_url = body.assignment_file_url || null;
+    if (body.assignment_link !== undefined) updatePayload.assignment_link = body.assignment_link || null;
 
-      const updatedAgenda = await tx.update(agendas).set(updatePayload).where(eq(agendas.id, id)).returning();
-      
-      if (updatedAgenda.length === 0) {
-        throw new Error("Agenda not found");
-      }
-
-      // Only replace questions if questions or preTestQuestions payload was explicitly provided
-      const shouldUpdateQuestions = Array.isArray(body.questions) || Array.isArray(body.preTestQuestions);
-      if (shouldUpdateQuestions) {
-        await tx.delete(post_test_questions).where(eq(post_test_questions.agenda_id, id));
-
-        if (Array.isArray(body.preTestQuestions)) {
-          for (const q of body.preTestQuestions) {
-            const qId = `PREQ-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-            await tx.insert(post_test_questions).values({
-              id: qId,
-              agenda_id: id,
-              test_type: 'PRE_TEST',
-              question: q.question,
-              options: JSON.stringify(q.options),
-              correct_option: String(q.correct_option),
-            });
-          }
-        }
-
-        if (Array.isArray(body.questions)) {
-          for (const q of body.questions) {
-            const qId = `Q-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-            await tx.insert(post_test_questions).values({
-              id: qId,
-              agenda_id: id,
-              test_type: 'POST_TEST',
-              question: q.question,
-              options: JSON.stringify(q.options),
-              correct_option: String(q.correct_option),
-            });
-          }
-        }
-      }
-
-      return updatedAgenda[0];
-    });
+    const updatedAgenda = await db.update(agendas).set(updatePayload).where(eq(agendas.id, id)).returning();
     
-    return NextResponse.json(result);
+    if (updatedAgenda.length === 0) {
+      return NextResponse.json({ error: "Agenda not found" }, { status: 404 });
+    }
+
+    // Only replace questions if questions or preTestQuestions payload was explicitly provided
+    const shouldUpdateQuestions = Array.isArray(body.questions) || Array.isArray(body.preTestQuestions);
+    if (shouldUpdateQuestions) {
+      await db.delete(post_test_questions).where(eq(post_test_questions.agenda_id, id));
+
+      if (Array.isArray(body.preTestQuestions)) {
+        for (const q of body.preTestQuestions) {
+          const qId = `PREQ-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+          await db.insert(post_test_questions).values({
+            id: qId,
+            agenda_id: id,
+            test_type: 'PRE_TEST',
+            question: q.question,
+            options: JSON.stringify(q.options),
+            correct_option: String(q.correct_option),
+          });
+        }
+      }
+
+      if (Array.isArray(body.questions)) {
+        for (const q of body.questions) {
+          const qId = `Q-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+          await db.insert(post_test_questions).values({
+            id: qId,
+            agenda_id: id,
+            test_type: 'POST_TEST',
+            question: q.question,
+            options: JSON.stringify(q.options),
+            correct_option: String(q.correct_option),
+          });
+        }
+      }
+    }
+
+    return NextResponse.json(updatedAgenda[0]);
   } catch (error) {
     console.error("Failed to update agenda", error);
     if (error.message === "Agenda not found") {
       return NextResponse.json({ error: "Agenda not found" }, { status: 404 });
     }
-    return NextResponse.json({ error: "Failed to update agenda" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update agenda: " + error.message }, { status: 500 });
   }
 }
 
@@ -111,28 +107,25 @@ export async function DELETE(req, { params }) {
   try {
     const { id } = await params;
     
-    const result = await db.transaction(async (tx) => {
-      // 1. Delete associated pre & post test questions
-      await tx.delete(post_test_questions).where(eq(post_test_questions.agenda_id, id));
-      
-      // 2. Delete associated pre & post test attempts
-      await tx.delete(post_test_attempts).where(eq(post_test_attempts.agenda_id, id));
-      
-      // 3. Delete associated attendance records
-      await tx.delete(attendance).where(eq(attendance.agenda_id, id));
-
-      // 3b. Delete associated assignment submissions
-      await tx.delete(agenda_submissions).where(eq(agenda_submissions.agenda_id, id));
-      
-      // 4. Delete agenda
-      const deletedAgenda = await tx.delete(agendas).where(eq(agendas.id, id)).returning();
-      return deletedAgenda;
-    });
+    // 1. Delete associated pre & post test questions
+    await db.delete(post_test_questions).where(eq(post_test_questions.agenda_id, id));
     
-    if (result.length === 0) {
+    // 2. Delete associated pre & post test attempts
+    await db.delete(post_test_attempts).where(eq(post_test_attempts.agenda_id, id));
+    
+    // 3. Delete associated attendance records
+    await db.delete(attendance).where(eq(attendance.agenda_id, id));
+
+    // 3b. Delete associated assignment submissions
+    await db.delete(agenda_submissions).where(eq(agenda_submissions.agenda_id, id));
+    
+    // 4. Delete agenda
+    const deletedAgenda = await db.delete(agendas).where(eq(agendas.id, id)).returning();
+    
+    if (deletedAgenda.length === 0) {
       return NextResponse.json({ error: "Agenda not found" }, { status: 404 });
     }
-    return NextResponse.json({ success: true, deleted: result[0] });
+    return NextResponse.json({ success: true, deleted: deletedAgenda[0] });
   } catch (error) {
     console.error("Failed to delete agenda", error);
     return NextResponse.json({ error: "Failed to delete agenda: " + error.message }, { status: 500 });

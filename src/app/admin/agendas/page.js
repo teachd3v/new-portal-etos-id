@@ -453,11 +453,16 @@ function AdminAgendasContent() {
         setHasDraft(false);
         fetchAgendas();
       } else {
-        const err = await res.json();
-        toast.error(err.error || 'Gagal membuat agenda');
+        let errMsg = 'Gagal membuat agenda';
+        try {
+          const err = await res.json();
+          errMsg = err.error || errMsg;
+        } catch {}
+        toast.error(errMsg);
       }
     } catch (error) {
       console.error("Failed to add agenda", error);
+      toast.error('Terjadi kesalahan jaringan');
     }
   };
 
@@ -518,10 +523,16 @@ function AdminAgendasContent() {
         setFormData(EMPTY_FORM);
         fetchAgendas();
       } else {
-        toast.error('Gagal memperbarui agenda');
+        let errMsg = 'Gagal memperbarui agenda';
+        try {
+          const err = await res.json();
+          errMsg = err.error || errMsg;
+        } catch {}
+        toast.error(errMsg);
       }
     } catch (error) {
       console.error("Failed to edit agenda", error);
+      toast.error('Terjadi kesalahan jaringan');
     }
   };
 
