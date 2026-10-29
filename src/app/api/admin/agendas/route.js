@@ -42,6 +42,12 @@ export async function POST(req) {
 
     const agendaId = body.id || generateId();
 
+    if (body.assignment_file_url && body.assignment_file_url.length > 950000) {
+      return NextResponse.json({
+        error: 'Ukuran file panduan penugasan melebihi kapasitas database (maks. 750KB). Silakan gunakan opsi Tautan Link (Google Drive / Docs) ya!'
+      }, { status: 400 });
+    }
+
     const newAgenda = await db.insert(agendas).values({
       id: agendaId,
       name: body.name,

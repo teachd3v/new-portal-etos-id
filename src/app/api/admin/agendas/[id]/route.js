@@ -34,6 +34,12 @@ export async function PUT(req, { params }) {
   try {
     const { id } = await params;
     const body = await req.json();
+
+    if (body.assignment_file_url && body.assignment_file_url.length > 950000) {
+      return NextResponse.json({
+        error: 'Ukuran file panduan penugasan melebihi kapasitas database (maks. 750KB). Silakan gunakan opsi Tautan Link (Google Drive / Docs) ya!'
+      }, { status: 400 });
+    }
     
     const updatePayload = {
       name: body.name,

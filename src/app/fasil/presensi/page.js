@@ -33,8 +33,11 @@ function FasilAssignmentBuilder({ formData, setFormData }) {
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 8 * 1024 * 1024) {
-      toast.error('Ukuran file maksimal 8MB');
+    if (file.size > 750 * 1024) {
+      toast.error(`Ukuran file "${file.name}" (${(file.size / (1024 * 1024)).toFixed(1)}MB) melebihi batas simpan langsung database (maks. 750KB). Silakan gunakan opsi Tautan Link (Google Drive / Docs) ya!`, {
+        duration: 6000
+      });
+      e.target.value = '';
       return;
     }
     const reader = new FileReader();
@@ -105,7 +108,7 @@ function FasilAssignmentBuilder({ formData, setFormData }) {
             <label className="flex flex-col items-center justify-center p-3.5 border-2 border-dashed border-orange-200 hover:border-orange-300 bg-white/70 rounded-xl cursor-pointer transition-colors group">
               <UploadCloud className="w-5 h-5 text-orange-500 group-hover:scale-110 transition-transform mb-1" />
               <span className="text-xs font-bold text-slate-700">Pilih Dokumen / File</span>
-              <span className="text-[10px] text-slate-400">PDF, Word, Excel, PPT, Zip (Max 8MB)</span>
+              <span className="text-[10px] text-slate-500 font-medium">Maks. 750KB (Gunakan Link jika &gt; 750KB)</span>
               <input type="file" className="hidden" onChange={handleFileUpload} />
             </label>
           )}

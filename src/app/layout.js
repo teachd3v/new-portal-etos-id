@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 
 import PwaRegister from "@/components/pwa/PwaRegister";
 import PwaInstallPrompt from "@/components/pwa/PwaInstallPrompt";
+import GlobalToaster from "@/components/common/GlobalToaster";
 
 export const viewport = {
   themeColor: "#0F766E",
@@ -47,6 +48,7 @@ export default function RootLayout({ children }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <GlobalToaster />
         <PwaRegister />
         {children}
         <PwaInstallPrompt />

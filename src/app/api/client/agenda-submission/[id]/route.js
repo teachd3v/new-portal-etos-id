@@ -49,6 +49,13 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: 'Kumpulkan penugasan melalui file, tautan link, atau catatan jawaban' }, { status: 400 });
     }
 
+    // SQLite / Cloudflare D1 statement length safeguard
+    if (file_url && file_url.length > 950000) {
+      return NextResponse.json({
+        error: 'Ukuran file melebihi kapasitas simpan langsung database (maks. 750KB). Silakan cantumkan tugas via opsi Tautan Link (Google Drive / Docs / Canva) ya!'
+      }, { status: 400 });
+    }
+
     const existing = await db.select().from(agenda_submissions).where(
       and(
         eq(agenda_submissions.agenda_id, agendaId),
@@ -101,6 +108,9 @@ export async function POST(req, { params }) {
     }
   } catch (error) {
     console.error('Failed to save agenda submission:', error);
-    return NextResponse.json({ error: 'Gagal menyimpan penugasan' }, { status: 500 });
+    const msg = error.message?.includes('SQLITE_TOOBIG') || error.message?.includes('too big')
+      ? 'Ukuran file terlalu besar untuk disimpan langsung di database. Harap gunakan Tautan Link (Google Drive / Docs) untuk file besar.'
+      : (error.message || 'Gagal menyimpan penugasan');
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

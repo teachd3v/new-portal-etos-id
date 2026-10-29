@@ -6,7 +6,6 @@ import FasilSidebar from '@/components/fasil/FasilSidebar';
 import FasilHeader from '@/components/fasil/FasilHeader';
 import MobileBottomNav from '@/components/navigation/MobileBottomNav';
 import { Loader2 } from 'lucide-react';
-import { Toaster } from 'react-hot-toast';
 
 export default function FasilLayout({ children }) {
   const router = useRouter();
@@ -73,15 +72,6 @@ export default function FasilLayout({ children }) {
 
   return (
     <div className="fixed inset-0 w-full h-[100dvh] bg-gradient-to-br from-orange-50 via-slate-50 to-amber-50 font-sans flex text-[#1E1E2D] overflow-hidden select-none">
-      <Toaster 
-        position="top-right" 
-        containerStyle={{ zIndex: 9999999 }}
-        containerClassName="!z-[9999999]"
-        toastOptions={{ 
-          className: 'font-sans font-medium text-orange-900 rounded-xl shadow-2xl backdrop-blur-md bg-white/95 border border-orange-100 !z-[9999999]',
-          style: { zIndex: 9999999 }
-        }} 
-      />
       
       {/* Decorative background blobs to enhance glassmorphism */}
       <div className="absolute top-[-10%] left-[-5%] w-96 h-96 bg-orange-400/20 rounded-full blur-3xl pointer-events-none"></div>

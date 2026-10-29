@@ -3,7 +3,6 @@ import { useEffect, Suspense } from 'react';
 import EtoserSidebar from '@/components/etoser/EtoserSidebar';
 import EtoserHeader from '@/components/etoser/EtoserHeader';
 import MobileBottomNav from '@/components/navigation/MobileBottomNav';
-import { Toaster } from 'react-hot-toast';
 import { useRouter, usePathname } from 'next/navigation';
 
 export default function EtoserLayout({ children }) {
@@ -34,15 +33,6 @@ export default function EtoserLayout({ children }) {
 
   return (
     <div className="fixed inset-0 w-full h-[100dvh] bg-gradient-to-br from-sky-50 via-slate-50 to-indigo-50 font-sans flex text-[#1E1E2D] overflow-hidden select-none">
-      <Toaster 
-        position="top-right" 
-        containerStyle={{ zIndex: 9999999 }}
-        containerClassName="!z-[9999999]"
-        toastOptions={{ 
-          className: 'font-sans font-medium text-sky-900 rounded-xl shadow-2xl backdrop-blur-md bg-white/95 border border-sky-100 !z-[9999999]',
-          style: { zIndex: 9999999 }
-        }} 
-      />
       
       {/* Decorative background blobs to enhance glassmorphism */}
       <div className="absolute top-[-10%] left-[-5%] w-96 h-96 bg-sky-400/20 rounded-full blur-3xl pointer-events-none"></div>

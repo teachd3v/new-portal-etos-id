@@ -92,8 +92,11 @@ export default function EtoserPresensiPage() {
   const handleSubmissionFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 8 * 1024 * 1024) {
-      toast.error('Ukuran file maksimal 8MB');
+    if (file.size > 750 * 1024) {
+      toast.error(`Ukuran file "${file.name}" (${(file.size / (1024 * 1024)).toFixed(1)}MB) melebihi batas simpan langsung database (maks. 750KB). Silakan gunakan Metode 2: Tautan Link (Google Drive / Docs) di bawah ya!`, {
+        duration: 6000
+      });
+      e.target.value = '';
       return;
     }
     const reader = new FileReader();
@@ -796,7 +799,8 @@ export default function EtoserPresensiPage() {
                   <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 hover:border-amber-400 bg-white rounded-xl cursor-pointer transition-colors group">
                     <UploadCloud className="w-6 h-6 text-amber-500 group-hover:scale-110 transition-transform mb-1" />
                     <span className="text-xs font-bold text-slate-800">Pilih File Tugas</span>
-                    <span className="text-[10px] text-slate-400">PDF, Word, Excel, PPT, Zip, Gambar (Max 8MB)</span>
+                    <span className="text-[10px] text-amber-700/80 font-medium">Dokumen / Gambar (Maks. 750KB)</span>
+                    <span className="text-[9px] text-slate-400">Untuk file besar (&gt; 750KB), harap gunakan Metode 2: Tautan Link di bawah</span>
                     <input type="file" className="hidden" onChange={handleSubmissionFileUpload} />
                   </label>
                 )}
