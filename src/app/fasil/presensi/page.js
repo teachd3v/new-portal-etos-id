@@ -4,10 +4,97 @@ import { createPortal } from 'react-dom';
 import {
   Users, Calendar, Search, Loader2, CheckCircle2, XCircle,
   Clock, AlertCircle, Award, FileText, X, ChevronDown, ChevronUp,
-  Plus, Edit2, Trash2, Copy, Download, Paperclip, ExternalLink, UploadCloud
+  Plus, Edit2, Trash2, Copy, Download, Paperclip, ExternalLink, UploadCloud,
+  ArrowUpDown
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
+
+function formatTimeStr(isoString) {
+  if (!isoString) return null;
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return null;
+    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+  } catch {
+    return null;
+  }
+}
+
+function sortParticipants(list, sortBy) {
+  const arr = [...list];
+  return arr.sort((a, b) => {
+    if (sortBy === 'FASTER_ATTENDANCE') {
+      const timeA = a.attendance_timestamp ? new Date(a.attendance_timestamp).getTime() : Infinity;
+      const timeB = b.attendance_timestamp ? new Date(b.attendance_timestamp).getTime() : Infinity;
+      if (timeA !== timeB) return timeA - timeB;
+      if (a.hadir !== b.hadir) return (b.hadir ? 1 : 0) - (a.hadir ? 1 : 0);
+      return a.name.localeCompare(b.name);
+    }
+    if (sortBy === 'FASTER_PRE_TEST') {
+      const timeA = a.pre_test_timestamp ? new Date(a.pre_test_timestamp).getTime() : Infinity;
+      const timeB = b.pre_test_timestamp ? new Date(b.pre_test_timestamp).getTime() : Infinity;
+      if (timeA !== timeB) return timeA - timeB;
+      if (a.hasTakenPreTest !== b.hasTakenPreTest) return (b.hasTakenPreTest ? 1 : 0) - (a.hasTakenPreTest ? 1 : 0);
+      return a.name.localeCompare(b.name);
+    }
+    if (sortBy === 'FASTER_POST_TEST') {
+      const timeA = a.post_test_timestamp ? new Date(a.post_test_timestamp).getTime() : Infinity;
+      const timeB = b.post_test_timestamp ? new Date(b.post_test_timestamp).getTime() : Infinity;
+      if (timeA !== timeB) return timeA - timeB;
+      if (a.hasTakenPostTest !== b.hasTakenPostTest) return (b.hasTakenPostTest ? 1 : 0) - (a.hasTakenPostTest ? 1 : 0);
+      return a.name.localeCompare(b.name);
+    }
+    if (sortBy === 'FASTER_SUBMISSION') {
+      const timeA = a.submission_timestamp ? new Date(a.submission_timestamp).getTime() : Infinity;
+      const timeB = b.submission_timestamp ? new Date(b.submission_timestamp).getTime() : Infinity;
+      if (timeA !== timeB) return timeA - timeB;
+      if (!!a.submission !== !!b.submission) return (b.submission ? 1 : 0) - (a.submission ? 1 : 0);
+      return a.name.localeCompare(b.name);
+    }
+    if (sortBy === 'HIGHEST_POST') {
+      const scoreA = a.postTestScore !== null ? a.postTestScore : -Infinity;
+      const scoreB = b.postTestScore !== null ? b.postTestScore : -Infinity;
+      if (scoreA !== scoreB) return scoreB - scoreA;
+      return a.name.localeCompare(b.name);
+    }
+    if (sortBy === 'HIGHEST_GAIN') {
+      const gainA = a.gainScore !== null ? a.gainScore : -Infinity;
+      const gainB = b.gainScore !== null ? b.gainScore : -Infinity;
+      if (gainA !== gainB) return gainB - gainA;
+      return a.name.localeCompare(b.name);
+    }
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function getParticipantRank(participant, sortedList, sortBy) {
+  if (!['FASTER_ATTENDANCE', 'FASTER_PRE_TEST', 'FASTER_POST_TEST', 'FASTER_SUBMISSION', 'HIGHEST_POST', 'HIGHEST_GAIN'].includes(sortBy)) {
+    return null;
+  }
+  let isQualified = false;
+  if (sortBy === 'FASTER_ATTENDANCE') isQualified = !!participant.attendance_timestamp;
+  else if (sortBy === 'FASTER_PRE_TEST') isQualified = !!participant.pre_test_timestamp;
+  else if (sortBy === 'FASTER_POST_TEST') isQualified = !!participant.post_test_timestamp;
+  else if (sortBy === 'FASTER_SUBMISSION') isQualified = !!participant.submission_timestamp;
+  else if (sortBy === 'HIGHEST_POST') isQualified = participant.postTestScore !== null;
+  else if (sortBy === 'HIGHEST_GAIN') isQualified = participant.gainScore !== null;
+
+  if (!isQualified) return null;
+
+  const qualifiedList = sortedList.filter(p => {
+    if (sortBy === 'FASTER_ATTENDANCE') return !!p.attendance_timestamp;
+    if (sortBy === 'FASTER_PRE_TEST') return !!p.pre_test_timestamp;
+    if (sortBy === 'FASTER_POST_TEST') return !!p.post_test_timestamp;
+    if (sortBy === 'FASTER_SUBMISSION') return !!p.submission_timestamp;
+    if (sortBy === 'HIGHEST_POST') return p.postTestScore !== null;
+    if (sortBy === 'HIGHEST_GAIN') return p.gainScore !== null;
+    return false;
+  });
+
+  const idx = qualifiedList.findIndex(p => p.id === participant.id && (!participant.agendaId || p.agendaId === participant.agendaId));
+  return idx >= 0 ? idx + 1 : null;
+}
 
 const EMPTY_FASIL_AGENDA_FORM = {
   id: "",
@@ -336,6 +423,7 @@ function FasilPresensiContent() {
   const [fasilAgendas, setFasilAgendas] = useState([]); // self agendas
   const [managedAgendas, setManagedAgendas] = useState([]); // agendas for Kelola Agenda tab
   const [searchQuery, setSearchQuery] = useState('');
+  const [binaanSortBy, setBinaanSortBy] = useState('FASTER_ATTENDANCE');
   const [submittingSelf, setSubmittingSelf] = useState(false);
   const [userId, setUserId] = useState('');
   const [expandedAgendas, setExpandedAgendas] = useState(new Set([0]));
@@ -343,6 +431,7 @@ function FasilPresensiContent() {
   // Skor tab filter states
   const [selectedSkorAgendaId, setSelectedSkorAgendaId] = useState('ALL');
   const [skorStatusFilter, setSkorStatusFilter] = useState('ALL');
+  const [skorSortBy, setSkorSortBy] = useState('FASTER_ATTENDANCE');
   const [skorSearchQuery, setSkorSearchQuery] = useState('');
 
   // Kelola Agenda modal states
@@ -729,8 +818,8 @@ function FasilPresensiContent() {
         });
       }
     }
-    return rows;
-  }, [allBinaanSummary, selectedSkorAgendaId, skorSearchQuery, skorStatusFilter]);
+    return sortParticipants(rows, skorSortBy);
+  }, [allBinaanSummary, selectedSkorAgendaId, skorSearchQuery, skorStatusFilter, skorSortBy]);
 
   const skorStats = useMemo(() => {
     const preList = skorRows.filter(r => r.preTestScore !== null).map(r => r.preTestScore);
@@ -753,8 +842,11 @@ function FasilPresensiContent() {
     }
     const headers = [
       'ID Agenda', 'Nama Agenda', 'Tipe', 'Tanggal', 'ID Etoser', 'Nama Etoser', 'Angkatan', 'Wilayah',
-      'Kehadiran', 'Skor Pre-Test', 'Skor Post-Test', 'Gain (Post - Pre)',
-      'Status Tugas', 'File Tugas', 'Link Tugas', 'Catatan Tugas'
+      'Kehadiran', 'Waktu Hadir',
+      'Skor Pre-Test', 'Waktu Pre-Test',
+      'Skor Post-Test', 'Waktu Post-Test',
+      'Gain (Post - Pre)',
+      'Status Tugas', 'Waktu Kumpul Tugas', 'File Tugas', 'Link Tugas', 'Catatan Tugas'
     ];
     const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lines = [
@@ -769,10 +861,14 @@ function FasilPresensiContent() {
         r.angkatan || '',
         r.wilayah || fasilWilayah || '',
         r.hadir ? 'Hadir' : 'Alpa',
+        formatTimeStr(r.attendance_timestamp) || '',
         r.preTestScore ?? '',
+        formatTimeStr(r.pre_test_timestamp) || '',
         r.postTestScore ?? '',
+        formatTimeStr(r.post_test_timestamp) || '',
         r.gainScore !== null ? (r.gainScore > 0 ? `+${r.gainScore}` : r.gainScore) : '',
         r.submission ? 'Terkumpul' : 'Belum',
+        formatTimeStr(r.submission_timestamp) || '',
         r.submission?.file_name || '',
         r.submission?.link_url || '',
         r.submission?.notes || ''
@@ -999,7 +1095,7 @@ function FasilPresensiContent() {
 
           <div className="bg-white/80 backdrop-blur-md border border-white/80 rounded-2xl md:rounded-[2rem] p-4 md:p-8 shadow-sm space-y-6">
             {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Filter Agenda</label>
                 <select
@@ -1028,6 +1124,25 @@ function FasilPresensiContent() {
                 </select>
               </div>
               <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Urutkan Berdasarkan</label>
+                <div className="relative">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <select
+                    value={skorSortBy}
+                    onChange={(e) => setSkorSortBy(e.target.value)}
+                    className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                  >
+                    <option value="FASTER_ATTENDANCE">⚡ Tercepat Presensi Hadir</option>
+                    <option value="FASTER_PRE_TEST">⚡ Tercepat Selesai Pre-Test</option>
+                    <option value="FASTER_POST_TEST">⚡ Tercepat Selesai Post-Test</option>
+                    <option value="FASTER_SUBMISSION">⚡ Tercepat Kumpul Penugasan</option>
+                    <option value="HIGHEST_POST">🏆 Skor Post-Test Tertinggi</option>
+                    <option value="HIGHEST_GAIN">📈 Skor Gain (Δ) Tertinggi</option>
+                    <option value="NAME_ASC">Abjad Nama (A-Z)</option>
+                  </select>
+                </div>
+              </div>
+              <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Cari Etoser / Agenda</label>
                 <div className="relative">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -1047,7 +1162,8 @@ function FasilPresensiContent() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                    <th className="pb-3 pl-2">Etoser Binaan</th>
+                    <th className="pb-3 pl-2 text-center w-16"># Rank</th>
+                    <th className="pb-3">Etoser Binaan</th>
                     <th className="pb-3">Agenda</th>
                     <th className="pb-3 text-center">Kehadiran</th>
                     <th className="pb-3 text-center">Skor Pre-Test</th>
@@ -1059,82 +1175,127 @@ function FasilPresensiContent() {
                 <tbody className="divide-y divide-slate-100">
                   {skorRows.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="py-12 text-center text-slate-400 font-medium">
+                      <td colSpan="8" className="py-12 text-center text-slate-400 font-medium">
                         Tidak ada data skor yang sesuai dengan filter.
                       </td>
                     </tr>
                   ) : (
-                    skorRows.map((row, idx) => (
-                      <tr key={`${row.agendaId}-${row.id}-${idx}`} className="hover:bg-orange-50/30 transition-colors">
-                        <td className="py-4 pl-2">
-                          <p className="font-bold text-slate-800 text-sm">{row.name}</p>
-                          <p className="text-xs text-slate-400">{row.id} &bull; Angkatan {row.angkatan}</p>
-                        </td>
-                        <td className="py-4">
-                          <p className="font-bold text-slate-800 text-sm">{row.agendaName}</p>
-                          <p className="text-xs text-slate-400">{row.agendaType} {row.agendaDate ? `• ${row.agendaDate}` : ''}</p>
-                        </td>
-                        <td className="py-4 text-center">
-                          {row.hadir ? (
-                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Hadir
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
-                              Alpa
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-4 text-center">
-                          {row.preTestScore !== null ? (
-                            <span className="inline-block font-black text-sm text-sky-800 bg-sky-100/80 px-3 py-1 rounded-xl border border-sky-200">
-                              {row.preTestScore}
-                            </span>
-                          ) : (
-                            <span className="text-xs font-semibold text-slate-400">Belum</span>
-                          )}
-                        </td>
-                        <td className="py-4 text-center">
-                          {row.postTestScore !== null ? (
-                            <span className="inline-block font-black text-sm text-indigo-800 bg-indigo-100/80 px-3 py-1 rounded-xl border border-indigo-200">
-                              {row.postTestScore}
-                            </span>
-                          ) : (
-                            <span className="text-xs font-semibold text-slate-400">Belum</span>
-                          )}
-                        </td>
-                        <td className="py-4 text-center">
-                          {row.gainScore !== null ? (
-                            <span className={`inline-block font-black text-xs px-2.5 py-1 rounded-xl border ${
-                              row.gainScore > 0
-                                ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                                : row.gainScore < 0
-                                ? 'bg-rose-100 text-rose-800 border-rose-200'
-                                : 'bg-slate-100 text-slate-700 border-slate-200'
-                            }`}>
-                              {row.gainScore > 0 ? `+${row.gainScore}` : row.gainScore}
-                            </span>
-                          ) : (
-                            <span className="text-xs font-semibold text-slate-300">-</span>
-                          )}
-                        </td>
-                        <td className="py-4 text-center pr-2">
-                          {row.submission ? (
-                            <button
-                              type="button"
-                              onClick={() => setViewingSubmission({ ...row.submission, userName: row.name, agendaName: row.agendaName })}
-                              className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-200 transition-colors cursor-pointer"
-                              title="Lihat Tugas Terkumpul"
-                            >
-                              <Paperclip className="w-3.5 h-3.5 text-amber-600" />
-                              <span>Lihat</span>
-                            </button>
-                          ) : (
-                            <span className="text-xs text-slate-300">-</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))
+                    skorRows.map((row, idx) => {
+                      const rank = getParticipantRank(row, skorRows, skorSortBy);
+                      return (
+                        <tr key={`${row.agendaId}-${row.id}-${idx}`} className="hover:bg-orange-50/30 transition-colors">
+                          <td className="py-4 pl-2 text-center">
+                            {rank ? (
+                              <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-black ${
+                                rank === 1 ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                                rank === 2 ? 'bg-slate-200 text-slate-800 border border-slate-300' :
+                                rank === 3 ? 'bg-amber-700/20 text-amber-900 border border-amber-700/30' :
+                                'bg-orange-50 text-orange-800'
+                              }`}>
+                                {rank === 1 ? '🥇 #1' : rank === 2 ? '🥈 #2' : rank === 3 ? '🥉 #3' : `#${rank}`}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-slate-300">-</span>
+                            )}
+                          </td>
+                          <td className="py-4">
+                            <p className="font-bold text-slate-800 text-sm">{row.name}</p>
+                            <p className="text-xs text-slate-400">{row.id} &bull; Angkatan {row.angkatan}</p>
+                          </td>
+                          <td className="py-4">
+                            <p className="font-bold text-slate-800 text-sm">{row.agendaName}</p>
+                            <p className="text-xs text-slate-400">{row.agendaType} {row.agendaDate ? `• ${row.agendaDate}` : ''}</p>
+                          </td>
+                          <td className="py-4 text-center">
+                            {row.hadir ? (
+                              <div>
+                                <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
+                                  <CheckCircle2 className="w-3.5 h-3.5" /> Hadir
+                                </span>
+                                {row.attendance_timestamp && (
+                                  <p className="text-[10px] text-slate-400 font-semibold mt-1">
+                                    {formatTimeStr(row.attendance_timestamp)}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
+                                Alpa
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-4 text-center">
+                            {row.preTestScore !== null ? (
+                              <div>
+                                <span className="inline-block font-black text-sm text-sky-800 bg-sky-100/80 px-3 py-1 rounded-xl border border-sky-200">
+                                  {row.preTestScore}
+                                </span>
+                                {row.pre_test_timestamp && (
+                                  <p className="text-[10px] text-slate-400 font-semibold mt-1">
+                                    {formatTimeStr(row.pre_test_timestamp)}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs font-semibold text-slate-400">Belum</span>
+                            )}
+                          </td>
+                          <td className="py-4 text-center">
+                            {row.postTestScore !== null ? (
+                              <div>
+                                <span className="inline-block font-black text-sm text-indigo-800 bg-indigo-100/80 px-3 py-1 rounded-xl border border-indigo-200">
+                                  {row.postTestScore}
+                                </span>
+                                {row.post_test_timestamp && (
+                                  <p className="text-[10px] text-slate-400 font-semibold mt-1">
+                                    {formatTimeStr(row.post_test_timestamp)}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs font-semibold text-slate-400">Belum</span>
+                            )}
+                          </td>
+                          <td className="py-4 text-center">
+                            {row.gainScore !== null ? (
+                              <span className={`inline-block font-black text-xs px-2.5 py-1 rounded-xl border ${
+                                row.gainScore > 0
+                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                  : row.gainScore < 0
+                                  ? 'bg-rose-100 text-rose-800 border-rose-200'
+                                  : 'bg-slate-100 text-slate-700 border-slate-200'
+                              }`}>
+                                {row.gainScore > 0 ? `+${row.gainScore}` : row.gainScore}
+                              </span>
+                            ) : (
+                              <span className="text-xs font-semibold text-slate-300">-</span>
+                            )}
+                          </td>
+                          <td className="py-4 text-center pr-2">
+                            {row.submission ? (
+                              <div>
+                                <button
+                                  type="button"
+                                  onClick={() => setViewingSubmission({ ...row.submission, userName: row.name, agendaName: row.agendaName })}
+                                  className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-200 transition-colors cursor-pointer"
+                                  title="Lihat Tugas Terkumpul"
+                                >
+                                  <Paperclip className="w-3.5 h-3.5 text-amber-600" />
+                                  <span>Lihat</span>
+                                </button>
+                                {row.submission_timestamp && (
+                                  <p className="text-[10px] text-amber-800/80 font-semibold mt-1">
+                                    {formatTimeStr(row.submission_timestamp)}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-300">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -1145,48 +1306,81 @@ function FasilPresensiContent() {
               {skorRows.length === 0 ? (
                 <p className="py-8 text-center text-slate-400 text-sm">Tidak ada data skor yang sesuai dengan filter.</p>
               ) : (
-                skorRows.map((row, idx) => (
-                  <div key={`${row.agendaId}-${row.id}-${idx}`} className="p-3.5 bg-white border border-orange-100 rounded-2xl space-y-2.5">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-bold text-slate-800 text-sm">{row.name}</h4>
-                        <p className="text-[11px] text-slate-400">{row.id} &bull; {row.agendaName}</p>
+                skorRows.map((row, idx) => {
+                  const rank = getParticipantRank(row, skorRows, skorSortBy);
+                  return (
+                    <div key={`${row.agendaId}-${row.id}-${idx}`} className="p-3.5 bg-white border border-orange-100 rounded-2xl space-y-2.5">
+                      <div className="flex justify-between items-start gap-2">
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {rank && (
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black ${
+                                rank === 1 ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                                rank === 2 ? 'bg-slate-200 text-slate-800 border border-slate-300' :
+                                rank === 3 ? 'bg-amber-700/20 text-amber-900 border border-amber-700/30' :
+                                'bg-orange-50 text-orange-800'
+                              }`}>
+                                {rank === 1 ? '🥇 #1' : rank === 2 ? '🥈 #2' : rank === 3 ? '🥉 #3' : `#${rank}`}
+                              </span>
+                            )}
+                            <h4 className="font-bold text-slate-800 text-sm">{row.name}</h4>
+                          </div>
+                          <p className="text-[11px] text-slate-400">{row.id} &bull; {row.agendaName}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          {row.hadir ? (
+                            <div>
+                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Hadir</span>
+                              {row.attendance_timestamp && (
+                                <p className="text-[9px] text-slate-400 mt-0.5">{formatTimeStr(row.attendance_timestamp)}</p>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">Alpa</span>
+                          )}
+                        </div>
                       </div>
-                      {row.hadir ? (
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Hadir</span>
-                      ) : (
-                        <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">Alpa</span>
+                      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
+                        <div className="bg-sky-50/70 rounded-xl p-2 border border-sky-100">
+                          <p className="text-[10px] font-bold text-sky-700 uppercase">Pre-Test</p>
+                          <p className="text-sm font-black text-sky-950">{row.preTestScore ?? '-'}</p>
+                          {row.pre_test_timestamp && (
+                            <p className="text-[9px] text-sky-700/80 mt-0.5">{formatTimeStr(row.pre_test_timestamp)}</p>
+                          )}
+                        </div>
+                        <div className="bg-indigo-50/70 rounded-xl p-2 border border-indigo-100">
+                          <p className="text-[10px] font-bold text-indigo-700 uppercase">Post-Test</p>
+                          <p className="text-sm font-black text-indigo-950">{row.postTestScore ?? '-'}</p>
+                          {row.post_test_timestamp && (
+                            <p className="text-[9px] text-indigo-700/80 mt-0.5">{formatTimeStr(row.post_test_timestamp)}</p>
+                          )}
+                        </div>
+                        <div className="bg-emerald-50/70 rounded-xl p-2 border border-emerald-100">
+                          <p className="text-[10px] font-bold text-emerald-700 uppercase">Gain (Δ)</p>
+                          <p className="text-sm font-black text-emerald-900">
+                            {row.gainScore !== null ? (row.gainScore > 0 ? `+${row.gainScore}` : row.gainScore) : '-'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {row.submission && (
+                        <button
+                          type="button"
+                          onClick={() => setViewingSubmission({ ...row.submission, userName: row.name, agendaName: row.agendaName })}
+                          className="w-full flex items-center justify-between text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200 mt-2 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <Paperclip className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Lihat Tugas Terkumpul</span>
+                          </div>
+                          {row.submission_timestamp && (
+                            <span className="text-[10px] text-amber-800/80 font-semibold">{formatTimeStr(row.submission_timestamp)}</span>
+                          )}
+                        </button>
                       )}
                     </div>
-                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
-                      <div className="bg-sky-50/70 rounded-xl p-2 border border-sky-100">
-                        <p className="text-[10px] font-bold text-sky-700 uppercase">Pre-Test</p>
-                        <p className="text-sm font-black text-sky-950">{row.preTestScore ?? '-'}</p>
-                      </div>
-                      <div className="bg-indigo-50/70 rounded-xl p-2 border border-indigo-100">
-                        <p className="text-[10px] font-bold text-indigo-700 uppercase">Post-Test</p>
-                        <p className="text-sm font-black text-indigo-950">{row.postTestScore ?? '-'}</p>
-                      </div>
-                      <div className="bg-emerald-50/70 rounded-xl p-2 border border-emerald-100">
-                        <p className="text-[10px] font-bold text-emerald-700 uppercase">Gain (Δ)</p>
-                        <p className="text-sm font-black text-emerald-900">
-                          {row.gainScore !== null ? (row.gainScore > 0 ? `+${row.gainScore}` : row.gainScore) : '-'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {row.submission && (
-                      <button
-                        type="button"
-                        onClick={() => setViewingSubmission({ ...row.submission, userName: row.name, agendaName: row.agendaName })}
-                        className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 py-1.5 rounded-xl border border-amber-200 mt-2 transition-colors cursor-pointer"
-                      >
-                        <Paperclip className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Lihat Tugas Terkumpul</span>
-                      </button>
-                    )}
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -1316,75 +1510,124 @@ function FasilPresensiContent() {
                     <div className="p-4 md:p-8 animate-in fade-in duration-300">
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6">
                         <h3 className="font-bold text-base md:text-lg text-slate-700">Daftar Etoser</h3>
-                        <div className="relative w-full sm:w-auto">
-                          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                          <input 
-                            type="text" 
-                            placeholder="Cari nama..." 
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full sm:w-64 pl-9 pr-4 py-1.5 md:py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20"
-                          />
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                          <div className="relative">
+                            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <select
+                              value={binaanSortBy}
+                              onChange={(e) => setBinaanSortBy(e.target.value)}
+                              className="w-full sm:w-56 pl-8 pr-3 py-1.5 md:py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                            >
+                              <option value="FASTER_ATTENDANCE">⚡ Tercepat Presensi Hadir</option>
+                              <option value="FASTER_PRE_TEST">⚡ Tercepat Pre-Test</option>
+                              <option value="FASTER_POST_TEST">⚡ Tercepat Post-Test</option>
+                              <option value="FASTER_SUBMISSION">⚡ Tercepat Penugasan</option>
+                              <option value="HIGHEST_POST">🏆 Skor Post Tertinggi</option>
+                              <option value="HIGHEST_GAIN">📈 Skor Gain (Δ) Tertinggi</option>
+                              <option value="NAME_ASC">Abjad Nama (A-Z)</option>
+                            </select>
+                          </div>
+                          <div className="relative">
+                            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <input 
+                              type="text" 
+                              placeholder="Cari nama..." 
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              className="w-full sm:w-64 pl-9 pr-4 py-1.5 md:py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                            />
+                          </div>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                        {item.etoserStatus
-                          .filter(e => e.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                          .map((etoser) => (
-                          <div key={etoser.id} className="flex items-center justify-between p-3.5 md:p-4 bg-white border border-slate-100 rounded-xl md:rounded-2xl hover:border-orange-200 hover:shadow-sm transition-all">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-bold text-xs md:text-sm text-white shadow-sm shrink-0 ${
-                                etoser.hadir ? 'bg-emerald-500' : 'bg-slate-300'
-                              }`}>
-                                {etoser.name.charAt(0).toUpperCase()}
-                              </div>
-                              <div className="min-w-0">
-                                <h4 className="font-bold text-slate-700 text-xs md:text-sm truncate" title={etoser.name}>
-                                  {etoser.name}
-                                </h4>
-                                <p className="text-[10px] md:text-xs text-slate-400">{etoser.id} &bull; {etoser.angkatan}</p>
-                              </div>
-                            </div>
-                            
-                            <div className="shrink-0 flex flex-col items-end gap-1">
-                              {etoser.hadir ? (
-                                <div className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 md:px-2.5 py-1 rounded-lg border border-emerald-100 text-xs font-bold">
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
-                                  <span>Hadir</span>
+                        {(() => {
+                          const filtered = (item.etoserStatus || []).filter(e => e.name.toLowerCase().includes(searchQuery.toLowerCase()));
+                          const sorted = sortParticipants(filtered, binaanSortBy);
+                          return sorted.map((etoser) => {
+                            const rank = getParticipantRank(etoser, sorted, binaanSortBy);
+                            return (
+                              <div key={etoser.id} className="flex items-center justify-between p-3.5 md:p-4 bg-white border border-slate-100 rounded-xl md:rounded-2xl hover:border-orange-200 hover:shadow-sm transition-all gap-2">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="relative shrink-0">
+                                    <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-bold text-xs md:text-sm text-white shadow-sm ${
+                                      etoser.hadir ? 'bg-emerald-500' : 'bg-slate-300'
+                                    }`}>
+                                      {etoser.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    {rank && (
+                                      <span className={`absolute -top-1.5 -right-1.5 px-1 py-0.2 rounded-full text-[9px] font-black border shadow-xs ${
+                                        rank === 1 ? 'bg-amber-100 text-amber-800 border-amber-300' :
+                                        rank === 2 ? 'bg-slate-200 text-slate-800 border-slate-300' :
+                                        rank === 3 ? 'bg-amber-700/20 text-amber-900 border-amber-700/30' :
+                                        'bg-orange-100 text-orange-800 border-orange-200'
+                                      }`}>
+                                        {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <h4 className="font-bold text-slate-700 text-xs md:text-sm truncate" title={etoser.name}>
+                                      {etoser.name}
+                                    </h4>
+                                    <p className="text-[10px] md:text-xs text-slate-400">{etoser.id} &bull; {etoser.angkatan}</p>
+                                  </div>
                                 </div>
-                              ) : (
-                                <div className="flex items-center gap-1 text-rose-500 bg-rose-50 px-2 md:px-2.5 py-1 rounded-lg border border-rose-100 text-xs font-bold">
-                                  <XCircle className="w-3.5 h-3.5" />
-                                  <span>Alpa</span>
+                                
+                                <div className="shrink-0 flex flex-col items-end gap-1">
+                                  {etoser.hadir ? (
+                                    <div className="text-right">
+                                      <div className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 md:px-2.5 py-0.5 md:py-1 rounded-lg border border-emerald-100 text-xs font-bold">
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        <span>Hadir</span>
+                                      </div>
+                                      {etoser.attendance_timestamp && (
+                                        <p className="text-[9px] text-emerald-700/80 font-semibold mt-0.5">{formatTimeStr(etoser.attendance_timestamp)}</p>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1 text-rose-500 bg-rose-50 px-2 md:px-2.5 py-0.5 md:py-1 rounded-lg border border-rose-100 text-xs font-bold">
+                                      <XCircle className="w-3.5 h-3.5" />
+                                      <span>Alpa</span>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-1 flex-wrap justify-end">
+                                    {etoser.hasTakenPreTest && (
+                                      <span className="text-[10px] font-black text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-200 inline-flex items-center gap-0.5">
+                                        Pre: {etoser.preTestScore}
+                                        {etoser.pre_test_timestamp && (
+                                          <span className="text-[9px] font-normal text-sky-600">({formatTimeStr(etoser.pre_test_timestamp)})</span>
+                                        )}
+                                      </span>
+                                    )}
+                                    {etoser.hasTakenPostTest && (
+                                      <span className="text-[10px] font-black text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 inline-flex items-center gap-0.5">
+                                        Post: {etoser.postTestScore}
+                                        {etoser.post_test_timestamp && (
+                                          <span className="text-[9px] font-normal text-indigo-600">({formatTimeStr(etoser.post_test_timestamp)})</span>
+                                        )}
+                                      </span>
+                                    )}
+                                    {etoser.submission && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setViewingSubmission({ ...etoser.submission, userName: etoser.name, agendaName: item.agenda.name })}
+                                        className="text-[10px] font-black text-amber-800 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded border border-amber-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                        title="Lihat Tugas Terkumpul"
+                                      >
+                                        <Paperclip className="w-2.5 h-2.5 text-amber-600" />
+                                        <span>Tugas</span>
+                                        {etoser.submission_timestamp && (
+                                          <span className="text-[9px] font-normal text-amber-700">({formatTimeStr(etoser.submission_timestamp)})</span>
+                                        )}
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
-                              )}
-                              <div className="flex items-center gap-1 flex-wrap justify-end">
-                                {etoser.hasTakenPreTest && (
-                                  <span className="text-[10px] font-black text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-200">
-                                    Pre: {etoser.preTestScore}
-                                  </span>
-                                )}
-                                {etoser.hasTakenPostTest && (
-                                  <span className="text-[10px] font-black text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">
-                                    Post: {etoser.postTestScore}
-                                  </span>
-                                )}
-                                {etoser.submission && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setViewingSubmission({ ...etoser.submission, userName: etoser.name, agendaName: item.agenda.name })}
-                                    className="text-[10px] font-black text-amber-800 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded border border-amber-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                                    title="Lihat Tugas Terkumpul"
-                                  >
-                                    <Paperclip className="w-2.5 h-2.5 text-amber-600" />
-                                    <span>Tugas</span>
-                                  </button>
-                                )}
                               </div>
-                            </div>
-                          </div>
-                        ))}
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
                   )}

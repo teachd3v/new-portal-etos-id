@@ -62,7 +62,8 @@ export async function GET(req) {
     }
 
     const buildAgendaSummary = (agendaList) => agendaList.map(agenda => {
-      const attendees = attendanceRecords.filter(a => a.agenda_id === agenda.id).map(a => a.pm_id);
+      const agendaAttendees = attendanceRecords.filter(a => a.agenda_id === agenda.id);
+      const attendees = agendaAttendees.map(a => a.pm_id);
       const agendaQs = questions.filter(q => q.agenda_id === agenda.id);
       const preTestCount = agendaQs.filter(q => (q.test_type || 'POST_TEST').toUpperCase() === 'PRE_TEST').length;
       const postTestCount = agendaQs.filter(q => (q.test_type || 'POST_TEST').toUpperCase() === 'POST_TEST').length;
@@ -70,6 +71,7 @@ export async function GET(req) {
       const agendaSubs = allSubmissions.filter(s => s.agenda_id === agenda.id);
 
       const etoserStatus = etosers.map(etoser => {
+        const attendeeRecord = agendaAttendees.find(a => a.pm_id === etoser.id);
         const preAttempt = agendaAttempts.find(
           a => a.user_id === etoser.id && (a.test_type || 'POST_TEST').toUpperCase() === 'PRE_TEST'
         );
@@ -83,13 +85,17 @@ export async function GET(req) {
 
         return {
           ...etoser,
-          hadir: attendees.includes(etoser.id),
+          hadir: !!attendeeRecord,
+          attendance_timestamp: attendeeRecord?.timestamp ? new Date(attendeeRecord.timestamp).toISOString() : null,
           hasTakenPreTest: !!preAttempt,
           preTestScore: preScore,
+          pre_test_timestamp: preAttempt?.timestamp ? new Date(preAttempt.timestamp).toISOString() : null,
           hasTakenPostTest: !!postAttempt,
           postTestScore: postScore,
+          post_test_timestamp: postAttempt?.timestamp ? new Date(postAttempt.timestamp).toISOString() : null,
           gainScore,
           submission: sub,
+          submission_timestamp: sub?.submitted_at ? new Date(sub.submitted_at).toISOString() : null,
         };
       });
 

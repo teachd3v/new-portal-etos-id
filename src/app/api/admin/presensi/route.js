@@ -83,7 +83,8 @@ export async function GET(req) {
         targetUsers = allUsers.filter(u => u.role && !u.role.toUpperCase().includes('FASIL'));
       }
 
-      const attendees = attendanceRecords.filter(a => a.agenda_id === agenda.id).map(a => a.pm_id);
+      const agendaAttendees = attendanceRecords.filter(a => a.agenda_id === agenda.id);
+      const attendees = agendaAttendees.map(a => a.pm_id);
       const agendaQuestions = questionRecords.filter(q => q.agenda_id === agenda.id);
       const preTestCount = agendaQuestions.filter(q => (q.test_type || 'POST_TEST').toUpperCase() === 'PRE_TEST').length;
       const postTestCount = agendaQuestions.filter(q => (q.test_type || 'POST_TEST').toUpperCase() === 'POST_TEST').length;
@@ -91,6 +92,7 @@ export async function GET(req) {
       const agendaSubmissions = submissionRecords.filter(s => s.agenda_id === agenda.id);
       
       const participantStatus = targetUsers.map(user => {
+        const attendeeRecord = agendaAttendees.find(a => a.pm_id === user.id);
         const preAttempt = agendaAttempts.find(
           a => a.user_id === user.id && (a.test_type || 'POST_TEST').toUpperCase() === 'PRE_TEST'
         );
@@ -104,13 +106,17 @@ export async function GET(req) {
 
         return {
           ...user,
-          hadir: attendees.includes(user.id),
+          hadir: !!attendeeRecord,
+          attendance_timestamp: attendeeRecord?.timestamp ? new Date(attendeeRecord.timestamp).toISOString() : null,
           hasTakenPreTest: !!preAttempt,
           preTestScore: preScore,
+          pre_test_timestamp: preAttempt?.timestamp ? new Date(preAttempt.timestamp).toISOString() : null,
           hasTakenPostTest: !!postAttempt,
           postTestScore: postScore,
+          post_test_timestamp: postAttempt?.timestamp ? new Date(postAttempt.timestamp).toISOString() : null,
           gainScore,
           submission: sub,
+          submission_timestamp: sub?.submitted_at ? new Date(sub.submitted_at).toISOString() : null,
         };
       });
 

@@ -6,7 +6,8 @@ import Link from 'next/link';
 import {
   Calendar, Plus, Search, Edit2, Trash2, X, Loader2,
   ChevronLeft, ChevronRight, Users, CheckCircle2, XCircle,
-  Copy, Download, TrendingUp, Award, FileText, Paperclip, ExternalLink, UploadCloud
+  Copy, Download, TrendingUp, Award, FileText, Paperclip, ExternalLink, UploadCloud,
+  Clock, ArrowUpDown, Zap
 } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
@@ -1317,11 +1318,97 @@ function AdminAgendasContent() {
   );
 }
 
+function formatTimeStr(isoString) {
+  if (!isoString) return null;
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return null;
+    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' WIB';
+  } catch {
+    return null;
+  }
+}
+
+function sortParticipants(list, sortBy) {
+  return [...list].sort((a, b) => {
+    if (sortBy === 'FASTER_ATTENDANCE') {
+      const timeA = a.attendance_timestamp ? new Date(a.attendance_timestamp).getTime() : Infinity;
+      const timeB = b.attendance_timestamp ? new Date(b.attendance_timestamp).getTime() : Infinity;
+      if (timeA !== timeB) return timeA - timeB;
+      if (a.hadir !== b.hadir) return (b.hadir ? 1 : 0) - (a.hadir ? 1 : 0);
+      return a.name.localeCompare(b.name);
+    }
+    if (sortBy === 'FASTER_PRE_TEST') {
+      const timeA = a.pre_test_timestamp ? new Date(a.pre_test_timestamp).getTime() : Infinity;
+      const timeB = b.pre_test_timestamp ? new Date(b.pre_test_timestamp).getTime() : Infinity;
+      if (timeA !== timeB) return timeA - timeB;
+      if (a.hasTakenPreTest !== b.hasTakenPreTest) return (b.hasTakenPreTest ? 1 : 0) - (a.hasTakenPreTest ? 1 : 0);
+      return a.name.localeCompare(b.name);
+    }
+    if (sortBy === 'FASTER_POST_TEST') {
+      const timeA = a.post_test_timestamp ? new Date(a.post_test_timestamp).getTime() : Infinity;
+      const timeB = b.post_test_timestamp ? new Date(b.post_test_timestamp).getTime() : Infinity;
+      if (timeA !== timeB) return timeA - timeB;
+      if (a.hasTakenPostTest !== b.hasTakenPostTest) return (b.hasTakenPostTest ? 1 : 0) - (a.hasTakenPostTest ? 1 : 0);
+      return a.name.localeCompare(b.name);
+    }
+    if (sortBy === 'FASTER_SUBMISSION') {
+      const timeA = a.submission_timestamp ? new Date(a.submission_timestamp).getTime() : Infinity;
+      const timeB = b.submission_timestamp ? new Date(b.submission_timestamp).getTime() : Infinity;
+      if (timeA !== timeB) return timeA - timeB;
+      if (!!a.submission !== !!b.submission) return (b.submission ? 1 : 0) - (a.submission ? 1 : 0);
+      return a.name.localeCompare(b.name);
+    }
+    if (sortBy === 'HIGHEST_POST') {
+      const scoreA = a.postTestScore !== null ? a.postTestScore : -Infinity;
+      const scoreB = b.postTestScore !== null ? b.postTestScore : -Infinity;
+      if (scoreA !== scoreB) return scoreB - scoreA;
+      return a.name.localeCompare(b.name);
+    }
+    if (sortBy === 'HIGHEST_GAIN') {
+      const gainA = a.gainScore !== null ? a.gainScore : -Infinity;
+      const gainB = b.gainScore !== null ? b.gainScore : -Infinity;
+      if (gainA !== gainB) return gainB - gainA;
+      return a.name.localeCompare(b.name);
+    }
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function getParticipantRank(participant, sortedList, sortBy) {
+  if (!['FASTER_ATTENDANCE', 'FASTER_PRE_TEST', 'FASTER_POST_TEST', 'FASTER_SUBMISSION', 'HIGHEST_POST', 'HIGHEST_GAIN'].includes(sortBy)) {
+    return null;
+  }
+  let isQualified = false;
+  if (sortBy === 'FASTER_ATTENDANCE') isQualified = !!participant.attendance_timestamp;
+  else if (sortBy === 'FASTER_PRE_TEST') isQualified = !!participant.pre_test_timestamp;
+  else if (sortBy === 'FASTER_POST_TEST') isQualified = !!participant.post_test_timestamp;
+  else if (sortBy === 'FASTER_SUBMISSION') isQualified = !!participant.submission_timestamp;
+  else if (sortBy === 'HIGHEST_POST') isQualified = participant.postTestScore !== null;
+  else if (sortBy === 'HIGHEST_GAIN') isQualified = participant.gainScore !== null;
+
+  if (!isQualified) return null;
+
+  const qualifiedList = sortedList.filter(p => {
+    if (sortBy === 'FASTER_ATTENDANCE') return !!p.attendance_timestamp;
+    if (sortBy === 'FASTER_PRE_TEST') return !!p.pre_test_timestamp;
+    if (sortBy === 'FASTER_POST_TEST') return !!p.post_test_timestamp;
+    if (sortBy === 'FASTER_SUBMISSION') return !!p.submission_timestamp;
+    if (sortBy === 'HIGHEST_POST') return p.postTestScore !== null;
+    if (sortBy === 'HIGHEST_GAIN') return p.gainScore !== null;
+    return false;
+  });
+
+  const idx = qualifiedList.findIndex(p => p.id === participant.id && (!participant.agendaId || p.agendaId === participant.agendaId));
+  return idx >= 0 ? idx + 1 : null;
+}
+
 function AdminPresensiContent() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [wilayahFilter, setWilayahFilter] = useState('');
+  const [sortBy, setSortBy] = useState('FASTER_ATTENDANCE'); // FASTER_ATTENDANCE, FASTER_PRE_TEST, FASTER_POST_TEST, FASTER_SUBMISSION, NAME_ASC
   const [wilayahOptions, setWilayahOptions] = useState([]);
   const [viewingSubmission, setViewingSubmission] = useState(null);
 
@@ -1381,15 +1468,31 @@ function AdminPresensiContent() {
             Pemantauan Presensi
           </h1>
           <p className="hidden md:block text-teal-800/70 font-medium text-base md:text-lg max-w-xl">
-            Pantau tingkat kehadiran seluruh Etoser & Fasilitator pada setiap agenda aktif.
+            Pantau tingkat kehadiran dan kecepatan pengerjaan pre-test, presensi, post-test, dan penugasan.
           </p>
         </div>
         
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2.5 items-center">
+          <div className="flex items-center gap-2 bg-white/70 backdrop-blur-md border border-teal-200 rounded-xl md:rounded-2xl px-3 py-1.5 shadow-sm">
+            <ArrowUpDown className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+            <span className="text-[11px] font-bold text-teal-800 uppercase tracking-wider hidden sm:inline">Urutkan:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-transparent text-xs md:text-sm font-bold text-teal-950 outline-none cursor-pointer"
+            >
+              <option value="FASTER_ATTENDANCE">⚡ Tercepat Hadir (Presensi)</option>
+              <option value="FASTER_PRE_TEST">⚡ Tercepat Selesai Pre-Test</option>
+              <option value="FASTER_POST_TEST">⚡ Tercepat Selesai Post-Test</option>
+              <option value="FASTER_SUBMISSION">⚡ Tercepat Kumpul Tugas</option>
+              <option value="NAME_ASC">Nama Peserta (A - Z)</option>
+            </select>
+          </div>
+
           <select 
             value={wilayahFilter}
             onChange={(e) => setWilayahFilter(e.target.value)}
-            className="py-2 md:py-3 px-3 md:px-5 bg-white/70 backdrop-blur-md border border-teal-200 rounded-xl md:rounded-2xl text-xs md:text-sm font-semibold text-teal-900 shadow-sm cursor-pointer outline-none focus:ring-2 focus:ring-teal-500/30"
+            className="py-2 md:py-2.5 px-3 md:px-4 bg-white/70 backdrop-blur-md border border-teal-200 rounded-xl md:rounded-2xl text-xs md:text-sm font-semibold text-teal-900 shadow-sm cursor-pointer outline-none focus:ring-2 focus:ring-teal-500/30"
           >
             <option value="">Semua Wilayah</option>
             {wilayahOptions.map(w => <option key={w} value={w}>{w}</option>)}
@@ -1404,130 +1507,235 @@ function AdminPresensiContent() {
         </div>
       ) : (
         <div className="space-y-6 md:space-y-8">
-          {data.map((item, idx) => (
-            <div key={idx} className="bg-white/70 backdrop-blur-2xl border border-white/60 rounded-2xl md:rounded-[2rem] shadow-[0_8px_32px_rgba(20,184,166,0.1)] overflow-hidden">
-              
-              <div className="p-4 md:p-8 border-b border-teal-100 bg-white/40 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
-                <div>
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span className={`px-2.5 py-0.5 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider ${
-                      item.agenda.type === 'Nasional' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
-                    }`}>
-                      {item.agenda.type}
-                    </span>
-                    {item.agenda.activity_type && (
-                      <span className="bg-teal-100 text-teal-700 px-2.5 py-0.5 rounded-lg text-[10px] md:text-xs font-bold">
-                        {item.agenda.activity_type}
-                      </span>
-                    )}
-                    <span className="bg-purple-100 text-purple-700 px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider">
-                      Target: {item.agenda.target_role === 'FASILITATOR' ? 'Fasil' : item.agenda.target_role === 'SEMUA' ? 'Semua' : 'Etoser'}
-                    </span>
-                  </div>
-                  <h2 className="text-xl md:text-2xl font-black text-teal-950">{item.agenda.name}</h2>
-                  <p className="text-xs md:text-sm text-teal-800/70 font-medium mt-0.5">
-                    Tema: {item.agenda.theme || '-'} &bull; {item.agenda.start_date}
-                  </p>
-                </div>
+          {data.map((item, idx) => {
+            const filteredParticipants = item.etoserStatus.filter(e => 
+              e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              e.id.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+            const sortedParticipants = sortParticipants(filteredParticipants, sortBy);
+
+            return (
+              <div key={idx} className="bg-white/70 backdrop-blur-2xl border border-white/60 rounded-2xl md:rounded-[2rem] shadow-[0_8px_32px_rgba(20,184,166,0.1)] overflow-hidden">
                 
-                <div className="flex gap-3 text-center shrink-0 flex-wrap">
-                  <div className="bg-teal-50/80 px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl border border-teal-100 shadow-inner">
-                    <p className="text-[10px] md:text-xs font-bold text-teal-600 uppercase tracking-wider mb-0.5">Kehadiran</p>
-                    <p className="text-xl md:text-2xl font-black text-teal-900">
-                      {item.totalHadir} <span className="text-sm md:text-base text-teal-700/60 font-medium">/ {item.totalEtoser}</span>
+                <div className="p-4 md:p-8 border-b border-teal-100 bg-white/40 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <span className={`px-2.5 py-0.5 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider ${
+                        item.agenda.type === 'Nasional' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {item.agenda.type}
+                      </span>
+                      {item.agenda.activity_type && (
+                        <span className="bg-teal-100 text-teal-700 px-2.5 py-0.5 rounded-lg text-[10px] md:text-xs font-bold">
+                          {item.agenda.activity_type}
+                        </span>
+                      )}
+                      <span className="bg-purple-100 text-purple-700 px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider">
+                        Target: {item.agenda.target_role === 'FASILITATOR' ? 'Fasil' : item.agenda.target_role === 'SEMUA' ? 'Semua' : 'Etoser'}
+                      </span>
+                    </div>
+                    <h2 className="text-xl md:text-2xl font-black text-teal-950">{item.agenda.name}</h2>
+                    <p className="text-xs md:text-sm text-teal-800/70 font-medium mt-0.5">
+                      Tema: {item.agenda.theme || '-'} &bull; {item.agenda.start_date}
                     </p>
                   </div>
-                </div>
-              </div>
-
-              <div className="p-4 md:p-8">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6">
-                  <h3 className="font-bold text-base md:text-lg text-teal-900">
-                    Daftar {item.agenda.target_role === 'FASILITATOR' ? 'Fasilitator' : item.agenda.target_role === 'SEMUA' ? 'Peserta (Etoser & Fasil)' : 'Etoser'}
-                  </h3>
-                  <div className="relative w-full sm:w-auto">
-                    <Search className="w-4 h-4 text-teal-700/50 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input 
-                      type="text" 
-                      placeholder="Cari nama..." 
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full sm:w-60 pl-9 pr-4 py-1.5 md:py-2 bg-white/60 border border-teal-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 text-teal-900"
-                    />
+                  
+                  <div className="flex gap-3 text-center shrink-0 flex-wrap">
+                    <div className="bg-teal-50/80 px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl border border-teal-100 shadow-inner">
+                      <p className="text-[10px] md:text-xs font-bold text-teal-600 uppercase tracking-wider mb-0.5">Kehadiran</p>
+                      <p className="text-xl md:text-2xl font-black text-teal-900">
+                        {item.totalHadir} <span className="text-sm md:text-base text-teal-700/60 font-medium">/ {item.totalEtoser}</span>
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 max-h-[400px] overflow-y-auto pr-1 pb-2">
-                  {item.etoserStatus
-                    .filter(e => e.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                    .map((etoser) => (
-                    <div key={etoser.id} className="flex items-center justify-between p-4 bg-white/50 border border-teal-100 rounded-2xl hover:border-teal-300 hover:shadow-md transition-all">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm shrink-0 ${
-                          etoser.hadir ? 'bg-emerald-500' : 'bg-slate-300'
-                        }`}>
-                          {etoser.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="font-bold text-teal-900 text-sm truncate max-w-[140px]" title={etoser.name}>
-                            {etoser.name}
-                          </h4>
-                          <p className="text-xs text-teal-700/60 truncate">
-                            {etoser.id} &bull; {etoser.role && etoser.role.toUpperCase().includes('FASIL') ? 'Fasil' : 'Etoser'} &bull; {etoser.wilayah}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="shrink-0">
-                        <div className="flex flex-col items-end gap-1">
-                          {etoser.hadir ? (
-                            <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span className="text-xs font-bold">Hadir</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1.5 text-rose-500 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-100">
-                              <XCircle className="w-3.5 h-3.5" />
-                              <span className="text-xs font-bold">Alpa</span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-1 flex-wrap justify-end">
-                            {etoser.hasTakenPreTest && (
-                              <span className="text-[10px] font-black text-sky-700 bg-sky-100/70 px-1.5 py-0.5 rounded border border-sky-200">
-                                Pre: {etoser.preTestScore}
+                <div className="p-4 md:p-8">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6">
+                    <div>
+                      <h3 className="font-bold text-base md:text-lg text-teal-900">
+                        Daftar {item.agenda.target_role === 'FASILITATOR' ? 'Fasilitator' : item.agenda.target_role === 'SEMUA' ? 'Peserta (Etoser & Fasil)' : 'Etoser'}
+                      </h3>
+                      <p className="text-xs text-teal-700/70 font-semibold mt-0.5">
+                        Diurutkan berdasarkan: <span className="text-teal-950 font-black">
+                          {sortBy === 'FASTER_ATTENDANCE' ? 'Tercepat Hadir (Presensi)' :
+                           sortBy === 'FASTER_PRE_TEST' ? 'Tercepat Selesai Pre-Test' :
+                           sortBy === 'FASTER_POST_TEST' ? 'Tercepat Selesai Post-Test' :
+                           sortBy === 'FASTER_SUBMISSION' ? 'Tercepat Kumpul Penugasan' : 'Nama Peserta (A-Z)'}
+                        </span>
+                      </p>
+                    </div>
+
+                    <div className="relative w-full sm:w-auto">
+                      <Search className="w-4 h-4 text-teal-700/50 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input 
+                        type="text" 
+                        placeholder="Cari nama..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full sm:w-60 pl-9 pr-4 py-1.5 md:py-2 bg-white/60 border border-teal-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 text-teal-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 max-h-[500px] overflow-y-auto pr-1 pb-2">
+                    {sortedParticipants.map((etoser) => {
+                      const rank = getParticipantRank(etoser, sortedParticipants, sortBy);
+
+                      return (
+                        <div key={etoser.id} className="p-4 bg-white/60 border border-teal-100 rounded-2xl hover:border-teal-300 hover:shadow-md transition-all space-y-3 relative overflow-hidden group">
+                          {/* Rank badge top banner */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-teal-700/70 truncate">
+                              {etoser.id} &bull; {etoser.wilayah || 'Nasional'}
+                            </span>
+                            {rank !== null && (
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black inline-flex items-center gap-1 shadow-2xs ${
+                                rank === 1
+                                  ? 'bg-amber-100 text-amber-950 border border-amber-300 ring-2 ring-amber-400/20'
+                                  : rank === 2
+                                  ? 'bg-slate-200 text-slate-800 border border-slate-300'
+                                  : rank === 3
+                                  ? 'bg-orange-100 text-orange-950 border border-orange-200'
+                                  : 'bg-teal-50 text-teal-800 border border-teal-200'
+                              }`}>
+                                {rank === 1 ? '🥇 #1 Tercepat' : rank === 2 ? '🥈 #2' : rank === 3 ? '🥉 #3' : `#${rank}`}
                               </span>
-                            )}
-                            {etoser.hasTakenPostTest && (
-                              <span className="text-[10px] font-black text-indigo-700 bg-indigo-100/70 px-1.5 py-0.5 rounded border border-indigo-200">
-                                Post: {etoser.postTestScore}
-                              </span>
-                            )}
-                            {etoser.submission && (
-                              <button
-                                type="button"
-                                onClick={() => setViewingSubmission({ ...etoser.submission, userName: etoser.name, agendaName: item.agenda.name })}
-                                className="text-[10px] font-black text-amber-800 bg-amber-100/80 hover:bg-amber-200/80 px-2 py-0.5 rounded border border-amber-300 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                                title="Lihat Tugas Terkumpul"
-                              >
-                                <Paperclip className="w-3 h-3 text-amber-700" />
-                                <span>Tugas</span>
-                              </button>
                             )}
                           </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {item.etoserStatus.filter(e => e.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
-                     <p className="text-teal-800/50 text-sm py-4">
-                       Tidak ada {item.agenda.target_role === 'FASILITATOR' ? 'Fasilitator' : item.agenda.target_role === 'SEMUA' ? 'Peserta' : 'Etoser'} ditemukan.
-                     </p>
-                  )}
-                </div>
-              </div>
 
-            </div>
-          ))}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-white shadow-sm shrink-0 ${
+                              etoser.hadir ? 'bg-emerald-500' : 'bg-slate-300'
+                            }`}>
+                              {etoser.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="font-bold text-teal-950 text-sm truncate" title={etoser.name}>
+                                {etoser.name}
+                              </h4>
+                              <p className="text-xs text-teal-700/60 truncate">
+                                {etoser.role && etoser.role.toUpperCase().includes('FASIL') ? 'Fasilitator' : 'Etoser'}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Visual Progression & Timestamps */}
+                          <div className="pt-2 border-t border-teal-100/70 space-y-1.5 text-xs">
+                            {/* 1. Presensi Hadir */}
+                            <div className={`flex items-center justify-between p-1.5 rounded-lg ${
+                              sortBy === 'FASTER_ATTENDANCE' && etoser.hadir ? 'bg-emerald-50/90 border border-emerald-200' : ''
+                            }`}>
+                              <span className="text-[11px] font-semibold text-slate-600">Kehadiran:</span>
+                              {etoser.hadir ? (
+                                <div className="text-right">
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Hadir
+                                  </span>
+                                  {formatTimeStr(etoser.attendance_timestamp) && (
+                                    <p className="text-[10px] text-emerald-800 font-semibold flex items-center gap-0.5 justify-end">
+                                      <Clock className="w-2.5 h-2.5 text-emerald-600" />
+                                      {formatTimeStr(etoser.attendance_timestamp)}
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-500">
+                                  <XCircle className="w-3 h-3" /> Alpa
+                                </span>
+                              )}
+                            </div>
+
+                            {/* 2. Pre-Test */}
+                            {item.agenda.hasPreTest && (
+                              <div className={`flex items-center justify-between p-1.5 rounded-lg ${
+                                sortBy === 'FASTER_PRE_TEST' && etoser.hasTakenPreTest ? 'bg-sky-50/90 border border-sky-200' : ''
+                              }`}>
+                                <span className="text-[11px] font-semibold text-slate-600">Pre-Test:</span>
+                                {etoser.hasTakenPreTest ? (
+                                  <div className="text-right">
+                                    <span className="text-[11px] font-black text-sky-800 bg-sky-100/80 px-1.5 py-0.5 rounded border border-sky-200">
+                                      Skor: {etoser.preTestScore}
+                                    </span>
+                                    {formatTimeStr(etoser.pre_test_timestamp) && (
+                                      <p className="text-[10px] text-sky-800 font-semibold flex items-center gap-0.5 justify-end mt-0.5">
+                                        <Clock className="w-2.5 h-2.5 text-sky-600" />
+                                        {formatTimeStr(etoser.pre_test_timestamp)}
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 font-medium">Belum tes</span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* 3. Post-Test */}
+                            {item.agenda.hasPostTest && (
+                              <div className={`flex items-center justify-between p-1.5 rounded-lg ${
+                                sortBy === 'FASTER_POST_TEST' && etoser.hasTakenPostTest ? 'bg-indigo-50/90 border border-indigo-200' : ''
+                              }`}>
+                                <span className="text-[11px] font-semibold text-slate-600">Post-Test:</span>
+                                {etoser.hasTakenPostTest ? (
+                                  <div className="text-right">
+                                    <span className="text-[11px] font-black text-indigo-800 bg-indigo-100/80 px-1.5 py-0.5 rounded border border-indigo-200">
+                                      Skor: {etoser.postTestScore}
+                                    </span>
+                                    {formatTimeStr(etoser.post_test_timestamp) && (
+                                      <p className="text-[10px] text-indigo-800 font-semibold flex items-center gap-0.5 justify-end mt-0.5">
+                                        <Clock className="w-2.5 h-2.5 text-indigo-600" />
+                                        {formatTimeStr(etoser.post_test_timestamp)}
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 font-medium">Belum tes</span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* 4. Penugasan */}
+                            <div className={`flex items-center justify-between p-1.5 rounded-lg ${
+                              sortBy === 'FASTER_SUBMISSION' && etoser.submission ? 'bg-amber-50/90 border border-amber-200' : ''
+                            }`}>
+                              <span className="text-[11px] font-semibold text-slate-600">Penugasan:</span>
+                              {etoser.submission ? (
+                                <div className="text-right">
+                                  <button
+                                    type="button"
+                                    onClick={() => setViewingSubmission({ ...etoser.submission, userName: etoser.name, agendaName: item.agenda.name })}
+                                    className="text-[10px] font-black text-amber-900 bg-amber-100/90 hover:bg-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                    title="Lihat Tugas Terkumpul"
+                                  >
+                                    <Paperclip className="w-3 h-3 text-amber-700" />
+                                    <span>Terkumpul</span>
+                                  </button>
+                                  {formatTimeStr(etoser.submission_timestamp) && (
+                                    <p className="text-[10px] text-amber-900 font-semibold flex items-center gap-0.5 justify-end mt-0.5">
+                                      <Clock className="w-2.5 h-2.5 text-amber-600" />
+                                      {formatTimeStr(etoser.submission_timestamp)}
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-slate-400 font-medium">Belum kumpul</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {sortedParticipants.length === 0 && (
+                       <p className="text-teal-800/50 text-sm py-4 col-span-3 text-center">
+                         Tidak ada {item.agenda.target_role === 'FASILITATOR' ? 'Fasilitator' : item.agenda.target_role === 'SEMUA' ? 'Peserta' : 'Etoser'} ditemukan.
+                       </p>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -1546,6 +1754,7 @@ function AdminSkorContent() {
   const [selectedAgendaId, setSelectedAgendaId] = useState('ALL');
   const [wilayahFilter, setWilayahFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL'); // ALL, TAKEN_ANY, COMPLETE
+  const [sortBy, setSortBy] = useState('FASTER_ATTENDANCE'); // FASTER_ATTENDANCE, FASTER_PRE_TEST, FASTER_POST_TEST, FASTER_SUBMISSION, HIGHEST_POST, HIGHEST_GAIN, NAME_ASC
   const [searchQuery, setSearchQuery] = useState('');
   const [wilayahOptions, setWilayahOptions] = useState([]);
   const [viewingSubmission, setViewingSubmission] = useState(null);
@@ -1616,8 +1825,8 @@ function AdminSkorContent() {
         });
       }
     }
-    return rows;
-  }, [filteredAgendasData, searchQuery, statusFilter]);
+    return sortParticipants(rows, sortBy);
+  }, [filteredAgendasData, searchQuery, statusFilter, sortBy]);
 
   const overallStats = useMemo(() => {
     const preList = flattenedRows.filter(r => r.preTestScore !== null).map(r => r.preTestScore);
@@ -1645,8 +1854,11 @@ function AdminSkorContent() {
     const headers = [
       'ID Agenda', 'Nama Agenda', 'Tipe Agenda', 'Tanggal',
       'ID Peserta', 'Nama Peserta', 'Role', 'Wilayah',
-      'Kehadiran', 'Skor Pre-Test', 'Skor Post-Test', 'Gain (Post - Pre)',
-      'Status Tugas', 'File Tugas', 'Link Tugas', 'Catatan Tugas'
+      'Kehadiran', 'Waktu Hadir',
+      'Skor Pre-Test', 'Waktu Pre-Test',
+      'Skor Post-Test', 'Waktu Post-Test',
+      'Gain (Post - Pre)',
+      'Status Tugas', 'Waktu Kumpul Tugas', 'File Tugas', 'Link Tugas', 'Catatan Tugas'
     ];
     const escapeCsv = (val) => {
       if (val === null || val === undefined) return '';
@@ -1665,10 +1877,14 @@ function AdminSkorContent() {
         r.role && r.role.toUpperCase().includes('FASIL') ? 'Fasilitator' : 'Etoser',
         r.wilayah || '',
         r.hadir ? 'Hadir' : 'Alpa',
+        formatTimeStr(r.attendance_timestamp) || '',
         r.preTestScore !== null ? r.preTestScore : '',
+        formatTimeStr(r.pre_test_timestamp) || '',
         r.postTestScore !== null ? r.postTestScore : '',
+        formatTimeStr(r.post_test_timestamp) || '',
         r.gainScore !== null ? (r.gainScore > 0 ? `+${r.gainScore}` : r.gainScore) : '',
         r.submission ? 'Terkumpul' : 'Belum',
+        formatTimeStr(r.submission_timestamp) || '',
         r.submission?.file_name || '',
         r.submission?.link_url || '',
         r.submission?.notes || ''
@@ -1678,7 +1894,7 @@ function AdminSkorContent() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `rekap-skor-pre-post-test-${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `Skor_PrePost_Test_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1747,7 +1963,7 @@ function AdminSkorContent() {
 
       {/* Filters & Table Card */}
       <div className="bg-white/50 backdrop-blur-2xl rounded-2xl md:rounded-[2.5rem] shadow-[0_8px_32px_rgba(20,184,166,0.1)] p-4 md:p-8 border border-white/60 space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div>
             <label className="block text-[11px] font-bold text-teal-800/70 uppercase mb-1">Filter Agenda</label>
             <select
@@ -1790,6 +2006,26 @@ function AdminSkorContent() {
           </div>
 
           <div>
+            <label className="block text-[11px] font-bold text-teal-800/70 uppercase mb-1">Urutkan Berdasarkan</label>
+            <div className="relative">
+              <ArrowUpDown className="w-3.5 h-3.5 text-teal-700/50 absolute left-3 top-1/2 -translate-y-1/2" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full pl-8 pr-3 py-2.5 bg-white/80 border border-teal-200 rounded-xl text-xs md:text-sm font-semibold text-teal-950 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+              >
+                <option value="FASTER_ATTENDANCE">⚡ Tercepat Presensi Hadir</option>
+                <option value="FASTER_PRE_TEST">⚡ Tercepat Selesai Pre-Test</option>
+                <option value="FASTER_POST_TEST">⚡ Tercepat Selesai Post-Test</option>
+                <option value="FASTER_SUBMISSION">⚡ Tercepat Kumpul Penugasan</option>
+                <option value="HIGHEST_POST">🏆 Skor Post-Test Tertinggi</option>
+                <option value="HIGHEST_GAIN">📈 Skor Gain (Δ) Tertinggi</option>
+                <option value="NAME_ASC">Abjad Nama (A-Z)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
             <label className="block text-[11px] font-bold text-teal-800/70 uppercase mb-1">Cari Peserta / Agenda</label>
             <div className="relative">
               <Search className="w-4 h-4 text-teal-700/50 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -1809,7 +2045,8 @@ function AdminSkorContent() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="text-xs font-bold text-teal-800/60 uppercase tracking-wider border-b-2 border-teal-900/5">
-                <th className="pb-3 pl-2">Peserta</th>
+                <th className="pb-3 pl-2 text-center w-16"># Rank</th>
+                <th className="pb-3">Peserta</th>
                 <th className="pb-3">Wilayah</th>
                 <th className="pb-3">Agenda</th>
                 <th className="pb-3 text-center">Kehadiran</th>
@@ -1822,85 +2059,130 @@ function AdminSkorContent() {
             <tbody className="divide-y divide-teal-900/5">
               {flattenedRows.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="py-12 text-center text-teal-800/50 font-medium">
+                  <td colSpan="9" className="py-12 text-center text-teal-800/50 font-medium">
                     Tidak ada data skor yang sesuai dengan filter.
                   </td>
                 </tr>
               ) : (
-                flattenedRows.map((row, idx) => (
-                  <tr key={`${row.agendaId}-${row.id}-${idx}`} className="hover:bg-white/50 transition-colors">
-                    <td className="py-4 pl-2">
-                      <p className="font-bold text-teal-950 text-sm">{row.name}</p>
-                      <p className="text-xs text-teal-700/60 font-medium">
-                        {row.id} &bull; {row.role && row.role.toUpperCase().includes('FASIL') ? 'Fasilitator' : 'Etoser'}
-                      </p>
-                    </td>
-                    <td className="py-4 text-sm font-semibold text-teal-900">{row.wilayah || '-'}</td>
-                    <td className="py-4">
-                      <p className="font-bold text-teal-950 text-sm">{row.agendaName}</p>
-                      <p className="text-xs text-teal-700/60">{row.agendaType} {row.agendaDate ? `• ${row.agendaDate}` : ''}</p>
-                    </td>
-                    <td className="py-4 text-center">
-                      {row.hadir ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Hadir
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
-                          Alpa
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-4 text-center">
-                      {row.preTestScore !== null ? (
-                        <span className="inline-block font-black text-sm text-sky-800 bg-sky-100/80 px-3 py-1 rounded-xl border border-sky-200">
-                          {row.preTestScore}
-                        </span>
-                      ) : (
-                        <span className="text-xs font-semibold text-slate-400">Belum</span>
-                      )}
-                    </td>
-                    <td className="py-4 text-center">
-                      {row.postTestScore !== null ? (
-                        <span className="inline-block font-black text-sm text-indigo-800 bg-indigo-100/80 px-3 py-1 rounded-xl border border-indigo-200">
-                          {row.postTestScore}
-                        </span>
-                      ) : (
-                        <span className="text-xs font-semibold text-slate-400">Belum</span>
-                      )}
-                    </td>
-                    <td className="py-4 text-center">
-                      {row.gainScore !== null ? (
-                        <span className={`inline-block font-black text-xs px-2.5 py-1 rounded-xl border ${
-                          row.gainScore > 0
-                            ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                            : row.gainScore < 0
-                            ? 'bg-rose-100 text-rose-800 border-rose-200'
-                            : 'bg-slate-100 text-slate-700 border-slate-200'
-                        }`}>
-                          {row.gainScore > 0 ? `+${row.gainScore}` : row.gainScore}
-                        </span>
-                      ) : (
-                        <span className="text-xs font-semibold text-slate-300">-</span>
-                      )}
-                    </td>
-                    <td className="py-4 text-center pr-2">
-                      {row.submission ? (
-                        <button
-                          type="button"
-                          onClick={() => setViewingSubmission({ ...row.submission, userName: row.name, agendaName: row.agendaName })}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-200 transition-colors cursor-pointer"
-                          title="Lihat Tugas Terkumpul"
-                        >
-                          <Paperclip className="w-3.5 h-3.5 text-amber-700" />
-                          <span>Lihat Tugas</span>
-                        </button>
-                      ) : (
-                        <span className="text-xs font-semibold text-slate-300">-</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                flattenedRows.map((row, idx) => {
+                  const rank = getParticipantRank(row, flattenedRows, sortBy);
+                  return (
+                    <tr key={`${row.agendaId}-${row.id}-${idx}`} className="hover:bg-white/50 transition-colors">
+                      <td className="py-4 pl-2 text-center">
+                        {rank ? (
+                          <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-black ${
+                            rank === 1 ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                            rank === 2 ? 'bg-slate-200 text-slate-800 border border-slate-300' :
+                            rank === 3 ? 'bg-amber-700/20 text-amber-900 border border-amber-700/30' :
+                            'bg-teal-50 text-teal-800'
+                          }`}>
+                            {rank === 1 ? '🥇 #1' : rank === 2 ? '🥈 #2' : rank === 3 ? '🥉 #3' : `#${rank}`}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-300">-</span>
+                        )}
+                      </td>
+                      <td className="py-4">
+                        <p className="font-bold text-teal-950 text-sm">{row.name}</p>
+                        <p className="text-xs text-teal-700/60 font-medium">
+                          {row.id} &bull; {row.role && row.role.toUpperCase().includes('FASIL') ? 'Fasilitator' : 'Etoser'}
+                        </p>
+                      </td>
+                      <td className="py-4 text-sm font-semibold text-teal-900">{row.wilayah || '-'}</td>
+                      <td className="py-4">
+                        <p className="font-bold text-teal-950 text-sm">{row.agendaName}</p>
+                        <p className="text-xs text-teal-700/60">{row.agendaType} {row.agendaDate ? `• ${row.agendaDate}` : ''}</p>
+                      </td>
+                      <td className="py-4 text-center">
+                        {row.hadir ? (
+                          <div>
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Hadir
+                            </span>
+                            {row.attendance_timestamp && (
+                              <p className="text-[10px] text-teal-700/70 font-semibold mt-1">
+                                {formatTimeStr(row.attendance_timestamp)}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
+                            Alpa
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-4 text-center">
+                        {row.preTestScore !== null ? (
+                          <div>
+                            <span className="inline-block font-black text-sm text-sky-800 bg-sky-100/80 px-3 py-1 rounded-xl border border-sky-200">
+                              {row.preTestScore}
+                            </span>
+                            {row.pre_test_timestamp && (
+                              <p className="text-[10px] text-teal-700/70 font-semibold mt-1">
+                                {formatTimeStr(row.pre_test_timestamp)}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-400">Belum</span>
+                        )}
+                      </td>
+                      <td className="py-4 text-center">
+                        {row.postTestScore !== null ? (
+                          <div>
+                            <span className="inline-block font-black text-sm text-indigo-800 bg-indigo-100/80 px-3 py-1 rounded-xl border border-indigo-200">
+                              {row.postTestScore}
+                            </span>
+                            {row.post_test_timestamp && (
+                              <p className="text-[10px] text-teal-700/70 font-semibold mt-1">
+                                {formatTimeStr(row.post_test_timestamp)}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-400">Belum</span>
+                        )}
+                      </td>
+                      <td className="py-4 text-center">
+                        {row.gainScore !== null ? (
+                          <span className={`inline-block font-black text-xs px-2.5 py-1 rounded-xl border ${
+                            row.gainScore > 0
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                              : row.gainScore < 0
+                              ? 'bg-rose-100 text-rose-800 border-rose-200'
+                              : 'bg-slate-100 text-slate-700 border-slate-200'
+                          }`}>
+                            {row.gainScore > 0 ? `+${row.gainScore}` : row.gainScore}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-300">-</span>
+                        )}
+                      </td>
+                      <td className="py-4 text-center pr-2">
+                        {row.submission ? (
+                          <div>
+                            <button
+                              type="button"
+                              onClick={() => setViewingSubmission({ ...row.submission, userName: row.name, agendaName: row.agendaName })}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-200 transition-colors cursor-pointer"
+                              title="Lihat Tugas Terkumpul"
+                            >
+                              <Paperclip className="w-3.5 h-3.5 text-amber-700" />
+                              <span>Lihat Tugas</span>
+                            </button>
+                            {row.submission_timestamp && (
+                              <p className="text-[10px] text-amber-900/70 font-semibold mt-1">
+                                {formatTimeStr(row.submission_timestamp)}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-300">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -1913,49 +2195,82 @@ function AdminSkorContent() {
               Tidak ada data skor yang sesuai dengan filter.
             </div>
           ) : (
-            flattenedRows.map((row, idx) => (
-              <div key={`${row.agendaId}-${row.id}-${idx}`} className="p-3.5 bg-white/90 border border-teal-100 rounded-2xl space-y-2.5">
-                <div className="flex justify-between items-start gap-2">
-                  <div>
-                    <h4 className="font-bold text-teal-950 text-sm">{row.name}</h4>
-                    <p className="text-[11px] text-teal-700/70">{row.id} &bull; {row.wilayah || '-'}</p>
-                    <p className="text-xs font-semibold text-teal-900 mt-0.5">{row.agendaName}</p>
+            flattenedRows.map((row, idx) => {
+              const rank = getParticipantRank(row, flattenedRows, sortBy);
+              return (
+                <div key={`${row.agendaId}-${row.id}-${idx}`} className="p-3.5 bg-white/90 border border-teal-100 rounded-2xl space-y-2.5">
+                  <div className="flex justify-between items-start gap-2">
+                    <div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {rank && (
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-black ${
+                            rank === 1 ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                            rank === 2 ? 'bg-slate-200 text-slate-800 border border-slate-300' :
+                            rank === 3 ? 'bg-amber-700/20 text-amber-900 border border-amber-700/30' :
+                            'bg-teal-50 text-teal-800'
+                          }`}>
+                            {rank === 1 ? '🥇 #1' : rank === 2 ? '🥈 #2' : rank === 3 ? '🥉 #3' : `#${rank}`}
+                          </span>
+                        )}
+                        <h4 className="font-bold text-teal-950 text-sm">{row.name}</h4>
+                      </div>
+                      <p className="text-[11px] text-teal-700/70">{row.id} &bull; {row.wilayah || '-'}</p>
+                      <p className="text-xs font-semibold text-teal-900 mt-0.5">{row.agendaName}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {row.hadir ? (
+                        <div>
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Hadir</span>
+                          {row.attendance_timestamp && (
+                            <p className="text-[9px] text-teal-700/70 mt-0.5">{formatTimeStr(row.attendance_timestamp)}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">Alpa</span>
+                      )}
+                    </div>
                   </div>
-                  {row.hadir ? (
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Hadir</span>
-                  ) : (
-                    <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">Alpa</span>
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-teal-50 text-center">
+                    <div className="bg-sky-50/70 rounded-xl p-2 border border-sky-100">
+                      <p className="text-[10px] font-bold text-sky-700 uppercase">Pre-Test</p>
+                      <p className="text-sm font-black text-sky-950">{row.preTestScore !== null ? row.preTestScore : '-'}</p>
+                      {row.pre_test_timestamp && (
+                        <p className="text-[9px] text-sky-700/80 mt-0.5">{formatTimeStr(row.pre_test_timestamp)}</p>
+                      )}
+                    </div>
+                    <div className="bg-indigo-50/70 rounded-xl p-2 border border-indigo-100">
+                      <p className="text-[10px] font-bold text-indigo-700 uppercase">Post-Test</p>
+                      <p className="text-sm font-black text-indigo-950">{row.postTestScore !== null ? row.postTestScore : '-'}</p>
+                      {row.post_test_timestamp && (
+                        <p className="text-[9px] text-indigo-700/80 mt-0.5">{formatTimeStr(row.post_test_timestamp)}</p>
+                      )}
+                    </div>
+                    <div className="bg-emerald-50/70 rounded-xl p-2 border border-emerald-100">
+                      <p className="text-[10px] font-bold text-emerald-700 uppercase">Gain (Δ)</p>
+                      <p className="text-sm font-black text-emerald-900">
+                        {row.gainScore !== null ? (row.gainScore > 0 ? `+${row.gainScore}` : row.gainScore) : '-'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {row.submission && (
+                    <button
+                      type="button"
+                      onClick={() => setViewingSubmission({ ...row.submission, userName: row.name, agendaName: row.agendaName })}
+                      className="w-full flex items-center justify-between text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Paperclip className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Lihat Tugas Terkumpul</span>
+                      </div>
+                      {row.submission_timestamp && (
+                        <span className="text-[10px] text-amber-900/70 font-semibold">{formatTimeStr(row.submission_timestamp)}</span>
+                      )}
+                    </button>
                   )}
                 </div>
-                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-teal-50 text-center">
-                  <div className="bg-sky-50/70 rounded-xl p-2 border border-sky-100">
-                    <p className="text-[10px] font-bold text-sky-700 uppercase">Pre-Test</p>
-                    <p className="text-sm font-black text-sky-950">{row.preTestScore !== null ? row.preTestScore : '-'}</p>
-                  </div>
-                  <div className="bg-indigo-50/70 rounded-xl p-2 border border-indigo-100">
-                    <p className="text-[10px] font-bold text-indigo-700 uppercase">Post-Test</p>
-                    <p className="text-sm font-black text-indigo-950">{row.postTestScore !== null ? row.postTestScore : '-'}</p>
-                  </div>
-                  <div className="bg-emerald-50/70 rounded-xl p-2 border border-emerald-100">
-                    <p className="text-[10px] font-bold text-emerald-700 uppercase">Gain (Δ)</p>
-                    <p className="text-sm font-black text-emerald-900">
-                      {row.gainScore !== null ? (row.gainScore > 0 ? `+${row.gainScore}` : row.gainScore) : '-'}
-                    </p>
-                  </div>
-                </div>
-
-                {row.submission && (
-                  <button
-                    type="button"
-                    onClick={() => setViewingSubmission({ ...row.submission, userName: row.name, agendaName: row.agendaName })}
-                    className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 py-1.5 rounded-xl border border-amber-200 transition-colors cursor-pointer"
-                  >
-                    <Paperclip className="w-3.5 h-3.5 text-amber-700" />
-                    <span>Lihat Tugas Terkumpul</span>
-                  </button>
-                )}
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
