@@ -2,14 +2,6 @@ import { useState, useEffect } from 'react';
 import { Save, Loader2, Edit3, CheckCircle2, Clock, Calendar, X, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-const DEFAULT_T0_T4 = [
-  { id: 'T0-2026', kode_periode: 'T0', label: 'T0 - Baseline (Awal Masuk Tahun 1)', start_date: '2026-09-01', end_date: '2026-09-30', tahun: '2026', is_open: true },
-  { id: 'T1-2026', kode_periode: 'T1', label: 'T1 - Evaluasi Akhir Tahun 1 (Year 1 Endline)', start_date: '2027-06-01', end_date: '2027-06-30', tahun: '2026', is_open: false },
-  { id: 'T2-2026', kode_periode: 'T2', label: 'T2 - Evaluasi Akhir Tahun 2 (Year 2 Endline)', start_date: '2028-06-01', end_date: '2028-06-30', tahun: '2026', is_open: false },
-  { id: 'T3-2026', kode_periode: 'T3', label: 'T3 - Evaluasi Akhir Tahun 3 (Year 3 Endline)', start_date: '2029-06-01', end_date: '2029-06-30', tahun: '2026', is_open: false },
-  { id: 'T4-2026', kode_periode: 'T4', label: 'T4 - Final Endline (Kelulusan Pembinaan)', start_date: '2030-06-01', end_date: '2030-06-30', tahun: '2026', is_open: false },
-];
-
 export default function SystemSettingsTab() {
   const [settings, setSettings] = useState({
     'variabel_instrumen': 'Value Resilience, Self Resilience, Social Resilience, Change Resilience',
@@ -21,8 +13,8 @@ export default function SystemSettingsTab() {
     'label_ipk_sangat_baik': 'Level 4 - Resilient Leader'
   });
   
-  const [periodes, setPeriodes] = useState(DEFAULT_T0_T4);
-  const [loading, setLoading] = useState(false);
+  const [periodes, setPeriodes] = useState([]);
+  const [loadingPeriodes, setLoadingPeriodes] = useState(true);
   const [saving, setSaving] = useState(false);
 
   // Edit Modal State
@@ -61,6 +53,8 @@ export default function SystemSettingsTab() {
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setLoadingPeriodes(false);
     }
   };
 
@@ -150,150 +144,158 @@ export default function SystemSettingsTab() {
           </div>
         </div>
 
-        {/* Desktop Table (>= md) */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b-2 border-slate-100 text-slate-700 text-xs uppercase tracking-wider">
-                <th className="py-3.5 px-4 font-black">Fase & Label Periode</th>
-                <th className="py-3.5 px-4 font-black">Masa Input Data (Jadwal)</th>
-                <th className="py-3.5 px-4 font-black">Tahun</th>
-                <th className="py-3.5 px-4 font-black text-center">Status Akses</th>
-                <th className="py-3.5 px-4 font-black text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
+        {loadingPeriodes ? (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table (>= md) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-slate-100 text-slate-700 text-xs uppercase tracking-wider">
+                    <th className="py-3.5 px-4 font-black">Fase & Label Periode</th>
+                    <th className="py-3.5 px-4 font-black">Masa Input Data (Jadwal)</th>
+                    <th className="py-3.5 px-4 font-black">Tahun</th>
+                    <th className="py-3.5 px-4 font-black text-center">Status Akses</th>
+                    <th className="py-3.5 px-4 font-black text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {periodes.map((p) => {
+                    const hasDates = p.start_date && p.end_date;
+                    return (
+                      <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50/70 transition-colors">
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-3">
+                            <span className="w-11 h-9 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 font-black text-sm flex items-center justify-center">
+                              {p.kode_periode}
+                            </span>
+                            <div>
+                              <p className="font-bold text-slate-900 text-sm">{p.label}</p>
+                              <p className="text-[11px] text-slate-400 font-medium">Kode: {p.kode_periode}</p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="py-4 px-4">
+                          {hasDates ? (
+                            <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100/80 px-3 py-1.5 rounded-xl border border-slate-200/60 w-fit">
+                              <Calendar className="w-3.5 h-3.5 text-teal-600" />
+                              <span>{p.start_date}</span>
+                              <span className="text-slate-400">s/d</span>
+                              <span>{p.end_date}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">Belum diatur</span>
+                          )}
+                        </td>
+
+                        <td className="py-4 px-4 font-bold text-slate-700 text-sm">
+                          {p.tahun}
+                        </td>
+
+                        <td className="py-4 px-4 text-center">
+                          <div className="flex items-center justify-center gap-3">
+                            <button 
+                              onClick={() => handleTogglePeriode(p.id, p.is_open)}
+                              className={`relative inline-flex h-6 w-12 shrink-0 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
+                                p.is_open ? 'bg-emerald-500' : 'bg-slate-300 hover:bg-slate-400'
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                                  p.is_open ? 'translate-x-7' : 'translate-x-1'
+                                }`}
+                              />
+                            </button>
+                            <span className={`text-xs font-bold w-16 text-left ${p.is_open ? 'text-emerald-600' : 'text-slate-400'}`}>
+                              {p.is_open ? 'DIBUKA' : 'DITUTUP'}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="py-4 px-4 text-right">
+                          <button 
+                            onClick={() => handleOpenEdit(p)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-bold border border-teal-200 transition-colors cursor-pointer"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            Edit Detail
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards (< md) */}
+            <div className="block md:hidden space-y-3">
               {periodes.map((p) => {
                 const hasDates = p.start_date && p.end_date;
                 return (
-                  <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50/70 transition-colors">
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-3">
-                        <span className="w-11 h-9 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 font-black text-sm flex items-center justify-center">
+                  <div key={p.id} className="p-3.5 rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-md shadow-xs space-y-3">
+                    {/* Header row: Kode badge, label, and edit button */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-9 h-8 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 font-black text-xs flex items-center justify-center shrink-0">
                           {p.kode_periode}
                         </span>
-                        <div>
-                          <p className="font-bold text-slate-900 text-sm">{p.label}</p>
-                          <p className="text-[11px] text-slate-400 font-medium">Kode: {p.kode_periode}</p>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-slate-900 text-sm leading-snug">{p.label}</h4>
+                          <p className="text-[11px] text-slate-400 font-medium">Tahun: {p.tahun}</p>
                         </div>
                       </div>
-                    </td>
 
-                    <td className="py-4 px-4">
+                      <button 
+                        onClick={() => handleOpenEdit(p)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-bold border border-teal-200 transition-colors shrink-0 cursor-pointer"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+                    </div>
+
+                    {/* Schedule Date */}
+                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100/80 p-2.5 rounded-xl border border-slate-200/60">
+                      <Calendar className="w-3.5 h-3.5 text-teal-600 shrink-0" />
                       {hasDates ? (
-                        <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100/80 px-3 py-1.5 rounded-xl border border-slate-200/60 w-fit">
-                          <Calendar className="w-3.5 h-3.5 text-teal-600" />
-                          <span>{p.start_date}</span>
-                          <span className="text-slate-400">s/d</span>
-                          <span>{p.end_date}</span>
-                        </div>
+                        <span>{p.start_date} s/d {p.end_date}</span>
                       ) : (
-                        <span className="text-xs text-slate-400 italic">Belum diatur</span>
+                        <span className="text-slate-400 italic">Jadwal belum diatur</span>
                       )}
-                    </td>
+                    </div>
 
-                    <td className="py-4 px-4 font-bold text-slate-700 text-sm">
-                      {p.tahun}
-                    </td>
-
-                    <td className="py-4 px-4 text-center">
-                      <div className="flex items-center justify-center gap-3">
+                    {/* Access Status & Toggle Switch */}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                      <span className="text-xs font-bold text-slate-600">Status Akses:</span>
+                      <div className="flex items-center gap-2.5">
                         <button 
                           onClick={() => handleTogglePeriode(p.id, p.is_open)}
-                          className={`relative inline-flex h-6 w-12 shrink-0 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
-                            p.is_open ? 'bg-emerald-500' : 'bg-slate-300 hover:bg-slate-400'
+                          className={`relative inline-flex h-5 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
+                            p.is_open ? 'bg-emerald-500' : 'bg-slate-300'
                           }`}
                         >
                           <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                              p.is_open ? 'translate-x-7' : 'translate-x-1'
+                            className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                              p.is_open ? 'translate-x-6' : 'translate-x-1'
                             }`}
                           />
                         </button>
-                        <span className={`text-xs font-bold w-16 text-left ${p.is_open ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        <span className={`text-xs font-extrabold ${p.is_open ? 'text-emerald-600' : 'text-slate-400'}`}>
                           {p.is_open ? 'DIBUKA' : 'DITUTUP'}
                         </span>
                       </div>
-                    </td>
-
-                    <td className="py-4 px-4 text-right">
-                      <button 
-                        onClick={() => handleOpenEdit(p)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-bold border border-teal-200 transition-colors cursor-pointer"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        Edit Detail
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile Cards (< md) */}
-        <div className="block md:hidden space-y-3">
-          {periodes.map((p) => {
-            const hasDates = p.start_date && p.end_date;
-            return (
-              <div key={p.id} className="p-3.5 rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-md shadow-xs space-y-3">
-                {/* Header row: Kode badge, label, and edit button */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="w-9 h-8 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 font-black text-xs flex items-center justify-center shrink-0">
-                      {p.kode_periode}
-                    </span>
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-slate-900 text-sm leading-snug">{p.label}</h4>
-                      <p className="text-[11px] text-slate-400 font-medium">Tahun: {p.tahun}</p>
                     </div>
                   </div>
-
-                  <button 
-                    onClick={() => handleOpenEdit(p)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-bold border border-teal-200 transition-colors shrink-0 cursor-pointer"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Edit</span>
-                  </button>
-                </div>
-
-                {/* Schedule Date */}
-                <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100/80 p-2.5 rounded-xl border border-slate-200/60">
-                  <Calendar className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-                  {hasDates ? (
-                    <span>{p.start_date} s/d {p.end_date}</span>
-                  ) : (
-                    <span className="text-slate-400 italic">Jadwal belum diatur</span>
-                  )}
-                </div>
-
-                {/* Access Status & Toggle Switch */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                  <span className="text-xs font-bold text-slate-600">Status Akses:</span>
-                  <div className="flex items-center gap-2.5">
-                    <button 
-                      onClick={() => handleTogglePeriode(p.id, p.is_open)}
-                      className={`relative inline-flex h-5 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
-                        p.is_open ? 'bg-emerald-500' : 'bg-slate-300'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
-                          p.is_open ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                    <span className={`text-xs font-extrabold ${p.is_open ? 'text-emerald-600' : 'text-slate-400'}`}>
-                      {p.is_open ? 'DIBUKA' : 'DITUTUP'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          </>
+        )}
 
       </div>
 
