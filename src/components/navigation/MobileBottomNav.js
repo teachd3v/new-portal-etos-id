@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, Users, FolderKanban, Settings, 
-  ClipboardCheck, UserCircle, Calendar, Compass 
+  ClipboardCheck, UserCircle, Calendar, Compass, BarChart3 
 } from 'lucide-react';
 
 const ROLE_NAV_ITEMS = {
@@ -15,6 +15,7 @@ const ROLE_NAV_ITEMS = {
   ],
   fasil: [
     { label: 'Beranda', href: '/fasil', icon: LayoutDashboard, exact: true },
+    { label: 'Analitik', href: '/fasil/analitik', icon: BarChart3 },
     { label: 'Presensi', href: '/fasil/presensi', icon: Users },
     { label: 'Penilaian', href: '/fasil/penilaian', icon: ClipboardCheck },
     { label: 'Profil', href: '/fasil/profil', icon: UserCircle },

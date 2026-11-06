@@ -25,8 +25,8 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
         const res = await fetch('/api/auth/me'); 
         if (res.ok) {
           const data = await res.json();
-          setUserName(data.name);
-          setUserId(data.id);
+          if (data.name) setUserName(data.name);
+          if (data.id) setUserId(data.id);
           if (data.avatar_url) setAvatarUrl(data.avatar_url);
         }
       } catch (e) {
@@ -34,6 +34,8 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
       }
     };
     fetchUser();
+    window.addEventListener('fasil-profile-updated', fetchUser);
+    return () => window.removeEventListener('fasil-profile-updated', fetchUser);
   }, []);
 
   useEffect(() => {
@@ -71,6 +73,7 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
 
   const initial = userName.charAt(0).toUpperCase() || 'F';
 
+  const isBeranda = pathname === '/fasil';
   const isPresensi = pathname === '/fasil/presensi';
   const isPenilaian = pathname.startsWith('/fasil/penilaian');
   const isProfil = pathname.startsWith('/fasil/profil');
@@ -82,8 +85,8 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
   const inactiveClass = "hover:text-[#1E1E2D] transition-colors";
 
   return (
-    <header className="pt-[env(safe-area-inset-top,0px)] min-h-[calc(4rem+env(safe-area-inset-top,0px))] md:min-h-[6rem] px-4 md:px-8 flex items-center justify-between shrink-0 bg-white/40 md:bg-white/20 backdrop-blur-md border-b border-white/30 sticky top-0 z-30 transition-all select-none">
-      {/* Back Button for Detail Pages */}
+    <header className="pt-[env(safe-area-inset-top,0px)] min-h-[calc(4rem+env(safe-area-inset-top,0px))] md:min-h-[6rem] px-4 md:px-8 flex items-center justify-between gap-2 shrink-0 bg-white/40 md:bg-white/20 backdrop-blur-md border-b border-white/30 sticky top-0 z-30 transition-all select-none">
+      {/* Left Area: Back button on detail, Fasil Name ONLY on Beranda, Sub-Tabs on Presensi/Penilaian/Profil, empty on Analitik */}
       {isDetailPage ? (
         <div>
           <button
@@ -94,7 +97,13 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
             <span>Kembali</span>
           </button>
         </div>
-      ) : (
+      ) : isBeranda ? (
+        <div className="min-w-0 flex items-center">
+          <span className="text-sm sm:text-base md:text-lg font-black text-slate-900 truncate max-w-[175px] sm:max-w-[260px] md:max-w-md leading-tight">
+            {userName}
+          </span>
+        </div>
+      ) : isPresensi || isPenilaian || isProfil ? (
         <>
           {/* Mobile Navigation Dropdown (< md) */}
           <div className="md:hidden">
@@ -121,11 +130,11 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
                 >
                   <option value="/fasil/penilaian">Asesmen RELI Binaan</option>
                   <option value="/fasil/penilaian/binaan">Monitoring Bulanan Binaan</option>
-                  <option value="/fasil/penilaian/mandiri">Penilaian Mandiri Fasil</option>
+                  <option value="/fasil/penilaian/mandiri">Penilaian Mandiri</option>
                 </select>
                 <ChevronDown className="w-3.5 h-3.5 text-orange-600 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
-            ) : isProfil ? (
+            ) : (
               <div className="relative">
                 <select
                   value={pathname}
@@ -137,7 +146,7 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
                 </select>
                 <ChevronDown className="w-3.5 h-3.5 text-orange-600 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
-            ) : null}
+            )}
           </div>
 
           {/* Desktop Navigation Tabs (>= md) */}
@@ -154,7 +163,7 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
               <>
                 <Link href="/fasil/penilaian" className={pathname === '/fasil/penilaian' ? activeClass : inactiveClass}>Asesmen RELI Binaan</Link>
                 <Link href="/fasil/penilaian/binaan" className={pathname === '/fasil/penilaian/binaan' ? activeClass : inactiveClass}>Monitoring Bulanan Binaan</Link>
-                <Link href="/fasil/penilaian/mandiri" className={pathname === '/fasil/penilaian/mandiri' ? activeClass : inactiveClass}>Penilaian Mandiri Fasil</Link>
+                <Link href="/fasil/penilaian/mandiri" className={pathname === '/fasil/penilaian/mandiri' ? activeClass : inactiveClass}>Penilaian Mandiri</Link>
               </>
             )}
             {isProfil && (
@@ -165,6 +174,8 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
             )}
           </div>
         </>
+      ) : (
+        <div />
       )}
 
       <div className="flex items-center gap-6">
@@ -222,13 +233,18 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
           </button>
           
           <div className="flex items-center gap-1.5 md:gap-3">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 border-2 border-white/80 shadow-md overflow-hidden flex justify-center items-center text-white font-bold text-xs md:text-sm cursor-pointer hover:scale-105 transition-transform">
+            <button
+              type="button"
+              onClick={() => router.push('/fasil/profil')}
+              title={userId ? `${userName} (${userId})` : userName}
+              className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 border-2 border-white/80 shadow-md overflow-hidden flex justify-center items-center text-white font-bold text-xs md:text-sm cursor-pointer hover:scale-105 transition-transform"
+            >
               {avatarUrl ? (
                 <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
               ) : (
                 initial
               )}
-            </div>
+            </button>
             <button onClick={onLogout} title="Logout" className="w-8 h-8 md:w-10 md:h-10 bg-white/50 backdrop-blur-md border border-white/60 rounded-full flex items-center justify-center text-red-400 hover:bg-white hover:text-red-600 shadow-sm transition-all cursor-pointer">
               <LogOut className="w-4 h-4 md:w-5 md:h-5" />
             </button>

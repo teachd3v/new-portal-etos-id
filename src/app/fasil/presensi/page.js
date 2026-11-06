@@ -900,14 +900,16 @@ function FasilPresensiContent() {
       {/* Header Section */}
       <div className="bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl md:rounded-[2.5rem] p-4 md:p-10 text-white shadow-xl relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
-          <div>
-            <h1 className="text-2xl md:text-4xl font-black mb-1 md:mb-2 drop-shadow-sm flex items-center gap-2.5 md:gap-3">
-              <Users className="w-7 h-7 md:w-10 md:h-10 text-orange-100" />
-              {activeTab === 'skor'
-                ? 'Skor Pre-Test & Post-Test'
-                : activeTab === 'agenda'
-                ? 'Kelola Agenda & Setup Soal'
-                : 'Presensi & Pemantauan'}
+          <div className="min-w-0 w-full">
+            <h1 className="text-[15px] sm:text-lg md:text-3xl font-black tracking-tight mb-0.5 md:mb-2 drop-shadow-sm flex items-center gap-2 md:gap-3 whitespace-nowrap">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 md:w-8 md:h-8 text-orange-100 shrink-0" />
+              <span>
+                {activeTab === 'skor'
+                  ? 'Skor Pre-Test & Post-Test'
+                  : activeTab === 'agenda'
+                  ? 'Kelola Agenda & Setup Soal'
+                  : 'Presensi & Pemantauan'}
+              </span>
             </h1>
             <p className="hidden md:block text-orange-100 font-medium text-base md:text-lg max-w-xl">
               {activeTab === 'skor'
@@ -921,7 +923,7 @@ function FasilPresensiContent() {
           {activeTab === 'agenda' ? (
             <button
               onClick={openAddAgendaModal}
-              className="bg-white text-orange-700 hover:bg-orange-50 font-black py-2.5 md:py-3.5 px-5 md:px-6 rounded-xl md:rounded-2xl shadow-lg flex items-center gap-2 text-xs md:text-sm cursor-pointer shrink-0 transition-all"
+              className="w-full sm:w-auto justify-center bg-white text-orange-700 hover:bg-orange-50 font-black py-2.5 md:py-3.5 px-5 md:px-6 rounded-xl md:rounded-2xl shadow-lg flex items-center gap-2 text-xs md:text-sm cursor-pointer shrink-0 transition-all"
             >
               <Plus className="w-4 h-4 md:w-5 md:h-5" />
               <span>Tambah Agenda</span>
@@ -929,18 +931,18 @@ function FasilPresensiContent() {
           ) : activeTab === 'skor' ? (
             <button
               onClick={exportFasilSkorCsv}
-              className="bg-white text-orange-700 hover:bg-orange-50 font-black py-2.5 md:py-3.5 px-5 md:px-6 rounded-xl md:rounded-2xl shadow-lg flex items-center gap-2 text-xs md:text-sm cursor-pointer shrink-0 transition-all"
+              className="w-full sm:w-auto justify-center bg-white text-orange-700 hover:bg-orange-50 font-black py-2.5 md:py-3.5 px-5 md:px-6 rounded-xl md:rounded-2xl shadow-lg flex items-center gap-2 text-xs md:text-sm cursor-pointer shrink-0 transition-all"
             >
               <Download className="w-4 h-4 md:w-5 md:h-5" />
               <span>Export CSV</span>
             </button>
           ) : (
-            <div className="bg-white/20 backdrop-blur-md border border-white/40 p-3 md:p-4 rounded-xl md:rounded-2xl flex items-center gap-3 md:gap-4 shrink-0">
+            <div className="bg-white/20 backdrop-blur-md border border-white/40 p-3 md:p-4 rounded-xl md:rounded-2xl flex items-center gap-3 md:gap-4 shrink-0 w-full sm:w-auto">
               <div className="p-2 md:p-3 bg-white/20 rounded-xl">
                 <Calendar className="w-5 h-5 md:w-6 md:h-6 text-white" />
               </div>
               <div>
-                <p className="text-[10px] md:text-sm text-orange-100 font-bold uppercase tracking-wider">Presensi Mandiri Fasil</p>
+                <p className="text-[10px] md:text-xs text-orange-100 font-bold uppercase tracking-wider">Agenda Wajib</p>
                 <p className="text-xl md:text-3xl font-black">{fasilAgendas.length}</p>
               </div>
             </div>

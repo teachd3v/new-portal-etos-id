@@ -113,6 +113,9 @@ export default function ProfilFasilPage() {
       
       if (json.success) {
         toast.success('Profil berhasil disimpan');
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('fasil-profile-updated'));
+        }
       } else {
         toast.error(json.error || 'Gagal menyimpan profil');
       }

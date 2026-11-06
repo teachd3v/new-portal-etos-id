@@ -14,7 +14,8 @@ export async function GET(req) {
 
     // Static Navigation Menus for Fasilitator
     const staticMenus = [
-      { type: 'Menu', label: 'Dashboard Fasilitator', url: '/fasil', subtitle: 'Pusat Pantauan & Summary Binaan' },
+      { type: 'Menu', label: 'Beranda Fasilitator', url: '/fasil', subtitle: 'Ringkasan Binaan, Tugas & Aktivitas' },
+      { type: 'Menu', label: 'Analitik Wilayah', url: '/fasil/analitik', subtitle: 'Analisis RELI & Monitoring Bulanan Wilayah' },
       { type: 'Menu', label: 'Presensi Mandiri Fasilitator', url: '/fasil/presensi?tab=self', subtitle: 'Catat Presensi Fasil' },
       { type: 'Menu', label: 'Pemantauan Presensi Binaan', url: '/fasil/presensi?tab=monitoring', subtitle: 'Verifikasi Kehadiran Etoser' },
       { type: 'Menu', label: 'Skor Pre & Post Test Binaan', url: '/fasil/presensi?tab=skor', subtitle: 'Rekap Nilai Pre-Test, Post-Test & Gain' },

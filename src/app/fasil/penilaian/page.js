@@ -43,13 +43,10 @@ export default function FasilPenilaianRELIList() {
       {/* Header Section */}
       <div className="bg-gradient-to-br from-orange-600 via-amber-600 to-slate-900 rounded-2xl md:rounded-[2.5rem] p-4 md:p-10 text-white shadow-xl relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
-          <div>
-            <span className="text-[10px] md:text-xs font-black tracking-widest uppercase text-orange-200 bg-orange-950/60 border border-orange-400/30 px-2.5 md:px-3 py-0.5 md:py-1 rounded-full">
-              Evaluator / Fasilitator
-            </span>
-            <h1 className="text-2xl md:text-4xl font-black mb-1 md:mb-2 mt-2 drop-shadow-sm flex items-center gap-2.5 md:gap-3">
-              <Compass className="w-7 h-7 md:w-10 md:h-10 text-orange-200" />
-              Asesmen RELI Etoser Binaan
+          <div className="min-w-0 w-full">
+            <h1 className="text-[15px] sm:text-lg md:text-3xl font-black tracking-tight mb-0.5 md:mb-2 drop-shadow-sm flex items-center gap-2 md:gap-3 whitespace-nowrap">
+              <Compass className="w-4 h-4 sm:w-5 sm:h-5 md:w-8 md:h-8 text-orange-200 shrink-0" />
+              <span>Asesmen RELI Etoser Binaan</span>
             </h1>
             <p className="text-orange-100/90 font-medium text-xs md:text-lg max-w-xl hidden md:block">
               Evaluasi kematangan kepemimpinan Etoser binaanmu menggunakan 64 butir rubrik instrumen RELI.

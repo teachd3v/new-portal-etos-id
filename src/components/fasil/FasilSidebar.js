@@ -1,17 +1,18 @@
 "use client";
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, ClipboardCheck, FileCheck2, UserCircle } from 'lucide-react';
+import { LayoutDashboard, BarChart3, Users, ClipboardCheck, UserCircle } from 'lucide-react';
 
 export default function FasilSidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
   const navItems = [
-    { href: '/fasil', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/fasil/presensi', icon: Users, label: 'Presensi Etoser' },
-    { href: '/fasil/penilaian', icon: ClipboardCheck, label: 'Penilaian Fasil', isActive: (p) => p.startsWith('/fasil/penilaian') },
-    { href: '/fasil/profil', icon: UserCircle, label: 'Profil & Portofolio', isActive: (p) => p.startsWith('/fasil/profil') }
+    { href: '/fasil', icon: LayoutDashboard, label: 'Beranda' },
+    { href: '/fasil/analitik', icon: BarChart3, label: 'Analitik Wilayah', isActive: (p) => p.startsWith('/fasil/analitik') },
+    { href: '/fasil/presensi', icon: Users, label: 'Presensi' },
+    { href: '/fasil/penilaian', icon: ClipboardCheck, label: 'Penilaian', isActive: (p) => p.startsWith('/fasil/penilaian') },
+    { href: '/fasil/profil', icon: UserCircle, label: 'Profil', isActive: (p) => p.startsWith('/fasil/profil') }
   ];
 
   return (

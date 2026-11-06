@@ -4,7 +4,6 @@ import { Users, FileCheck2, ClipboardCheck, TrendingUp, Calendar, ArrowRight, Lo
 import Link from 'next/link';
 
 export default function FasilDashboard() {
-  const [user, setUser] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -12,12 +11,6 @@ export default function FasilDashboard() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const resUser = await fetch('/api/auth/me');
-        if (resUser.ok) {
-          const dataUser = await resUser.json();
-          setUser(dataUser);
-        }
-
         const resDash = await fetch('/api/fasil/dashboard');
         if (resDash.ok) {
           const dataDash = await resDash.json();
@@ -33,31 +26,10 @@ export default function FasilDashboard() {
   }, []);
 
   return (
-    <div className="max-w-[1200px] mx-auto space-y-5 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 py-2 md:py-4 pb-20">
-      
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl md:rounded-[2.5rem] p-4 md:p-10 text-white shadow-xl relative overflow-hidden">
-        <div className="relative z-10">
-          <span className="inline-block text-[10px] md:text-xs font-black tracking-widest uppercase text-orange-200 bg-orange-950/60 border border-orange-400/30 px-2.5 py-0.5 rounded-full mb-1.5 md:mb-2">
-            Fasilitator
-          </span>
-          <h1 className="text-2xl md:text-4xl font-black mb-1 md:mb-2 drop-shadow-sm">
-            <span className="md:hidden">Dashboard</span>
-            <span className="hidden md:inline">Halo, Kak {user?.name || 'Fasilitator'}! 👋</span>
-          </h1>
-          <p className="hidden md:block text-orange-100 font-medium text-base md:text-lg max-w-xl">
-            Selamat datang di Portal Fasilitator. Pantau perkembangan, presensi, dan lakukan penilaian untuk Etoser binaanmu.
-          </p>
-        </div>
-        
-        {/* Decorative elements */}
-        <div className="absolute right-0 top-0 w-96 h-96 bg-white opacity-5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-        <div className="absolute right-20 bottom-0 w-64 h-64 bg-amber-400 opacity-20 rounded-full blur-3xl translate-y-1/3"></div>
-      </div>
-
+    <div className="max-w-[1200px] mx-auto space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 py-2 md:py-4 pb-16">
       {loading ? (
-        <div className="flex justify-center items-center py-20">
-           <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
+        <div className="flex justify-center items-center py-24">
+          <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
         </div>
       ) : (
         <>
@@ -136,11 +108,8 @@ export default function FasilDashboard() {
             {/* Right Col: Recent Activity */}
             <div className="space-y-6">
               <div className="bg-white/60 backdrop-blur-md border border-white/80 p-4 md:p-8 rounded-2xl md:rounded-[2rem] shadow-sm">
-                <h3 className="text-base md:text-xl font-bold text-slate-800 mb-4 md:mb-6 flex items-center justify-between">
-                  <span>Aktivitas Terbaru</span>
-                  <span className="text-[10px] md:text-xs font-bold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-200">
-                    Live History
-                  </span>
+                <h3 className="text-base md:text-xl font-bold text-slate-800 mb-4 md:mb-6">
+                  Aktivitas Terbaru
                 </h3>
                 
                 <div className="space-y-4">

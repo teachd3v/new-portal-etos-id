@@ -195,13 +195,13 @@ export default function FasilPenilaianMandiriPage() {
       {/* Header Section */}
       <div className="bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl md:rounded-[2.5rem] p-4 md:p-10 text-white shadow-xl relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
-          <div>
-            <h1 className="text-2xl md:text-4xl font-black mb-1 md:mb-2 drop-shadow-sm flex items-center gap-2.5 md:gap-3">
-              <FileText className="w-7 h-7 md:w-10 md:h-10" />
-              Penilaian Mandiri
+          <div className="min-w-0 w-full">
+            <h1 className="text-[15px] sm:text-lg md:text-3xl font-black tracking-tight mb-0.5 md:mb-2 drop-shadow-sm flex items-center gap-2 md:gap-3 whitespace-nowrap">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5 md:w-8 md:h-8 shrink-0" />
+              <span>Penilaian Mandiri</span>
             </h1>
             <p className="text-orange-100 font-medium text-xs md:text-lg max-w-xl">
-              Lakukan refleksi diri untuk periode <span className="font-bold text-white">{activePeriod.bulan} {activePeriod.tahun}</span>.
+              Periode <span className="font-bold text-white">{activePeriod.bulan} {activePeriod.tahun}</span>
             </p>
           </div>
         </div>
