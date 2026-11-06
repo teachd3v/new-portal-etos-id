@@ -152,48 +152,48 @@ export default function InstrumenReliTab() {
     <div className="space-y-6 max-w-6xl pb-20 animate-in fade-in duration-300">
       
       {/* Header & Filter Bar */}
-      <div className="bg-white/70 backdrop-blur-md rounded-2xl md:rounded-3xl border border-slate-200/80 p-4 md:p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white/70 backdrop-blur-md rounded-2xl md:rounded-3xl border border-slate-200/80 p-3.5 md:p-6 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 md:gap-4">
         <div>
-          <h2 className="text-lg md:text-2xl font-black text-slate-900 flex items-center gap-2">
-            <Compass className="w-5 h-5 md:w-6 md:h-6 text-teal-600" />
-            Master Butir Resilient Leaders Index
+          <h2 className="text-sm sm:text-base md:text-xl font-black text-slate-900 flex items-center gap-2">
+            <Compass className="w-4 h-4 md:w-5 md:h-5 text-teal-600 shrink-0" />
+            <span>Master Butir Resilient Leaders Index</span>
           </h2>
-          <p className="hidden md:block text-slate-500 font-medium text-sm mt-0.5">
+          <p className="hidden md:block text-slate-500 font-medium text-xs md:text-sm mt-0.5">
             Total {items.length} butir instrumen standar terintegrasi untuk seluruh tahun pembinaan (T0 - T4).
           </p>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-56 md:w-64">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Cari butir atau kode..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              className="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal-500/20 placeholder:text-[11px] md:placeholder:text-xs placeholder:text-slate-400"
             />
           </div>
 
           <button
             onClick={handleOpenAdd}
-            className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 px-4 rounded-xl flex items-center gap-2 shadow-sm transition-all active:scale-95 text-xs whitespace-nowrap"
+            className="bg-teal-700 hover:bg-teal-800 text-white font-bold py-2 px-3 md:px-4 rounded-xl flex items-center gap-1.5 shadow-sm transition-all active:scale-95 text-xs whitespace-nowrap shrink-0 cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
-            Tambah Butir
+            <Plus className="w-3.5 h-3.5" />
+            <span>Tambah Butir</span>
           </button>
         </div>
       </div>
 
       {/* Dimension Filter Buttons */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-1.5 md:gap-2 overflow-x-auto pb-1 scrollbar-none">
         {dimensionTabs.map(dim => (
           <button
             key={dim}
             onClick={() => setSelectedDim(dim)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-xl text-[11px] md:text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
               selectedDim === dim
-                ? 'bg-teal-700 text-white shadow-sm'
+                ? 'bg-teal-800 text-white shadow-sm'
                 : 'bg-white/80 text-slate-600 hover:bg-white border border-slate-200/80'
             }`}
           >
@@ -203,84 +203,98 @@ export default function InstrumenReliTab() {
       </div>
 
       {/* Item Cards */}
-      <div className="space-y-4">
+      <div className="space-y-3 md:space-y-4">
         {filteredItems.length === 0 ? (
-          <div className="bg-white/60 backdrop-blur-md rounded-3xl border border-slate-200 p-12 text-center text-slate-400 font-medium">
+          <div className="bg-white/60 backdrop-blur-md rounded-2xl md:rounded-3xl border border-slate-200 p-8 md:p-12 text-center text-slate-400 font-medium text-xs md:text-sm">
             Tidak ada butir instrumen yang sesuai dengan pencarian atau filter.
           </div>
         ) : filteredItems.map(item => (
-          <div key={item.id} className="bg-white/90 backdrop-blur-md rounded-2xl md:rounded-3xl border border-slate-200/80 p-4 md:p-6 shadow-sm space-y-4 hover:border-teal-300/80 transition-colors">
+          <div key={item.id} className="bg-white/90 backdrop-blur-md rounded-2xl md:rounded-3xl border border-slate-200/80 p-3.5 md:p-6 shadow-sm space-y-3 md:space-y-4 hover:border-teal-300/80 transition-colors">
             
             {/* Header & Actions */}
-            <div className="flex justify-between items-start gap-4">
-              <div className="flex gap-3 items-center">
-                <span className="w-9 h-9 rounded-xl bg-teal-50 text-teal-800 font-black text-xs flex items-center justify-center border border-teal-200 shrink-0">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5 min-w-0">
+                <span className="w-7 h-7 md:w-8 md:h-8 rounded-lg md:rounded-xl bg-teal-50 text-teal-800 font-black text-xs flex items-center justify-center border border-teal-200 shrink-0 mt-0.5">
                   {item.order_num}
                 </span>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-100">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                    <span className="font-mono text-[10px] md:text-xs font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200/80 shrink-0">
                       {item.kode}
                     </span>
-                    <span className="text-xs font-bold text-slate-500">
+                    <span className="text-[11px] md:text-xs font-bold text-slate-500 truncate">
                       {item.dimensi} &bull; {item.subdimensi}
                     </span>
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 mt-0.5">{item.judul}</h3>
+                  <h3 className="text-xs sm:text-sm md:text-base font-black text-slate-900 leading-snug">
+                    {item.judul}
+                  </h3>
                 </div>
               </div>
 
               {/* Action Buttons: Edit & Delete */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => handleOpenEdit(item)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-bold border border-teal-200 transition-colors"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg md:rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 text-[11px] md:text-xs font-bold border border-teal-200 transition-colors cursor-pointer"
                   title="Edit Butir"
                 >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  Edit
+                  <Edit3 className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                  <span>Edit</span>
                 </button>
                 <button
                   onClick={() => handleDelete(item.id)}
                   disabled={deletingId === item.id}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold border border-rose-200 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg md:rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-[11px] md:text-xs font-bold border border-rose-200 transition-colors disabled:opacity-50 cursor-pointer"
                   title="Hapus Butir"
                 >
-                  {deletingId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                  Hapus
+                  {deletingId === item.id ? (
+                    <Loader2 className="w-3 h-3 md:w-3.5 md:h-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                  )}
+                  <span>Hapus</span>
                 </button>
               </div>
             </div>
 
             {/* Statements comparison */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs bg-slate-50/90 p-3 md:p-4 rounded-xl md:rounded-2xl border border-slate-200/70">
               <div>
-                <p className="font-bold text-teal-800 uppercase tracking-wider mb-1">Pernyataan Self (Etoser):</p>
-                <p className="text-slate-700 italic leading-relaxed">"{item.pernyataan_self}"</p>
+                <p className="font-bold text-[10px] md:text-xs text-teal-900 uppercase tracking-wider mb-0.5">
+                  Pernyataan Self (Etoser):
+                </p>
+                <p className="text-slate-700 italic text-[11px] md:text-xs leading-relaxed">
+                  "{item.pernyataan_self}"
+                </p>
               </div>
               <div>
-                <p className="font-bold text-indigo-800 uppercase tracking-wider mb-1">Pernyataan Fasilitator:</p>
-                <p className="text-slate-700 italic leading-relaxed">"{item.pernyataan_fasil}"</p>
+                <p className="font-bold text-[10px] md:text-xs text-indigo-900 uppercase tracking-wider mb-0.5">
+                  Pernyataan Fasilitator:
+                </p>
+                <p className="text-slate-700 italic text-[11px] md:text-xs leading-relaxed">
+                  "{item.pernyataan_fasil}"
+                </p>
               </div>
             </div>
 
             {/* 4 Levels */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5 pt-1 text-xs">
-              <div className="p-3 bg-slate-50 border border-slate-200/60 rounded-xl">
-                <p className="font-bold text-slate-600 mb-1">Level 1 - Emerging</p>
-                <p className="text-slate-700 leading-relaxed text-[11px]">{item.bar_level_1}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pt-0.5 text-xs">
+              <div className="p-2.5 bg-slate-50 border border-slate-200/70 rounded-xl">
+                <p className="font-bold text-slate-700 text-[11px] mb-0.5">Level 1 - Emerging</p>
+                <p className="text-slate-600 leading-relaxed text-[10px] md:text-[11px]">{item.bar_level_1}</p>
               </div>
-              <div className="p-3 bg-slate-50 border border-slate-200/60 rounded-xl">
-                <p className="font-bold text-slate-600 mb-1">Level 2 - Developing</p>
-                <p className="text-slate-700 leading-relaxed text-[11px]">{item.bar_level_2}</p>
+              <div className="p-2.5 bg-slate-50 border border-slate-200/70 rounded-xl">
+                <p className="font-bold text-slate-700 text-[11px] mb-0.5">Level 2 - Developing</p>
+                <p className="text-slate-600 leading-relaxed text-[10px] md:text-[11px]">{item.bar_level_2}</p>
               </div>
-              <div className="p-3 bg-teal-50/60 border border-teal-200/60 rounded-xl">
-                <p className="font-bold text-teal-800 mb-1">Level 3 - Transformative</p>
-                <p className="text-teal-950 leading-relaxed text-[11px]">{item.bar_level_3}</p>
+              <div className="p-2.5 bg-teal-50/70 border border-teal-200/70 rounded-xl">
+                <p className="font-bold text-teal-900 text-[11px] mb-0.5">Level 3 - Transformative</p>
+                <p className="text-teal-950 leading-relaxed text-[10px] md:text-[11px]">{item.bar_level_3}</p>
               </div>
-              <div className="p-3 bg-emerald-50/60 border border-emerald-200/60 rounded-xl">
-                <p className="font-bold text-emerald-800 mb-1">Level 4 - Resilient</p>
-                <p className="text-emerald-950 leading-relaxed text-[11px]">{item.bar_level_4}</p>
+              <div className="p-2.5 bg-emerald-50/70 border border-emerald-200/70 rounded-xl">
+                <p className="font-bold text-emerald-900 text-[11px] mb-0.5">Level 4 - Resilient</p>
+                <p className="text-emerald-950 leading-relaxed text-[10px] md:text-[11px]">{item.bar_level_4}</p>
               </div>
             </div>
 
