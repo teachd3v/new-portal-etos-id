@@ -73,7 +73,7 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
 
   const initial = userName.charAt(0).toUpperCase() || 'F';
 
-  const isBeranda = pathname === '/fasil';
+  const showUserName = pathname === '/fasil' || pathname.startsWith('/fasil/analitik');
   const isPresensi = pathname === '/fasil/presensi';
   const isPenilaian = pathname.startsWith('/fasil/penilaian');
   const isProfil = pathname.startsWith('/fasil/profil');
@@ -86,7 +86,7 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
 
   return (
     <header className="pt-[env(safe-area-inset-top,0px)] min-h-[calc(4rem+env(safe-area-inset-top,0px))] md:min-h-[6rem] px-4 md:px-8 flex items-center justify-between gap-2 shrink-0 bg-white/40 md:bg-white/20 backdrop-blur-md border-b border-white/30 sticky top-0 z-30 transition-all select-none">
-      {/* Left Area: Back button on detail, Fasil Name ONLY on Beranda, Sub-Tabs on Presensi/Penilaian/Profil, empty on Analitik */}
+      {/* Left Area: Back button on detail, Fasil Name on Beranda & Analitik, Sub-Tabs on Presensi/Penilaian/Profil */}
       {isDetailPage ? (
         <div>
           <button
@@ -97,7 +97,7 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
             <span>Kembali</span>
           </button>
         </div>
-      ) : isBeranda ? (
+      ) : showUserName ? (
         <div className="min-w-0 flex items-center">
           <span className="text-sm sm:text-base md:text-lg font-black text-slate-900 truncate max-w-[175px] sm:max-w-[260px] md:max-w-md leading-tight">
             {userName}
