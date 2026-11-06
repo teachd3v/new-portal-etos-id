@@ -1,18 +1,21 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
-import { users, reports, report_answers, instrumen_fasil, catatan_admin } from '@/db/schema';
+import { users, profil_user, reports, report_answers, instrumen_fasil, catatan_admin } from '@/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 
 export async function GET(req, { params }) {
   try {
     const { id } = await params;
 
-    // 1. Fetch Fasil User
+    // 1. Fetch Fasil User & Profil
     const userList = await db.select().from(users).where(eq(users.id, id));
     if (userList.length === 0) {
       return NextResponse.json({ error: 'Fasilitator tidak ditemukan' }, { status: 404 });
     }
     const fasil = userList[0];
+
+    const profilList = await db.select().from(profil_user).where(eq(profil_user.id, id));
+    const profil = profilList[0] || {};
 
     // 2. Fetch Period info
     const today = new Date();
@@ -106,6 +109,20 @@ export async function GET(req, { params }) {
         role: fasil.role,
         fasil_role: fasilRole,
         wilayah: fasil.wilayah || '-',
+        avatar_url: profil.foto_profil || fasil.avatar_url || '',
+        profesi: profil.profesi || '',
+        instansi: profil.instansi || '',
+        sektor_industri: profil.sektor_industri || '',
+        pengalaman_tahun: profil.pengalaman_tahun || '',
+        bidang_keahlian: profil.bidang_keahlian || '',
+        bio_profesional: profil.bio_profesional || '',
+        pendidikan_terakhir: profil.pendidikan_terakhir || '',
+        universitas: profil.universitas || '',
+        jurusan: profil.jurusan || '',
+        no_hp: profil.no_hp || '',
+        email_profesional: profil.email_profesional || '',
+        linkedin_url: profil.linkedin_url || '',
+        alamat_domisili: profil.alamat_domisili || '',
       },
       period: {
         month: currentMonthName,

@@ -18,7 +18,6 @@ export async function GET(req) {
 
     const userId = payload.id;
 
-    // Get user base info
     const userResult = await db.select().from(users).where(eq(users.id, userId));
     const user = userResult[0];
 
@@ -26,31 +25,37 @@ export async function GET(req) {
       return NextResponse.json({ error: 'User tidak ditemukan' }, { status: 404 });
     }
 
-    // Get extra profile info
     const profilResult = await db.select().from(profil_user).where(eq(profil_user.id, userId));
     const profil = profilResult[0] || {};
     const fotoProfil = profil.foto_profil || user.avatar_url || '';
 
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        id: user.id,
-        name: user.name,
-        role: user.role,
-        fasil_role: user.fasil_role,
-        wilayah: user.wilayah,
-        universitas: profil.universitas || '',
-        fakultas: profil.fakultas || '',
-        jurusan: profil.jurusan || '',
-        semester_berjalan: profil.semester_berjalan || '',
-        ipk_terakhir: profil.ipk_terakhir || null,
-        no_hp: profil.no_hp || '',
-        alamat_domisili: profil.alamat_domisili || '',
-        foto_profil: fotoProfil
-      }
-    }, { status: 200 });
-
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          id: user.id,
+          name: user.name,
+          role: user.role,
+          fasil_role: user.fasil_role || 'Reguler',
+          wilayah: user.wilayah || '-',
+          profesi: profil.profesi || '',
+          instansi: profil.instansi || '',
+          sektor_industri: profil.sektor_industri || '',
+          pengalaman_tahun: profil.pengalaman_tahun || '',
+          bidang_keahlian: profil.bidang_keahlian || '',
+          bio_profesional: profil.bio_profesional || '',
+          pendidikan_terakhir: profil.pendidikan_terakhir || '',
+          universitas: profil.universitas || '',
+          jurusan: profil.jurusan || '',
+          no_hp: profil.no_hp || '',
+          email_profesional: profil.email_profesional || '',
+          linkedin_url: profil.linkedin_url || '',
+          alamat_domisili: profil.alamat_domisili || '',
+          foto_profil: fotoProfil,
+        },
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -71,41 +76,74 @@ export async function PUT(req) {
 
     const userId = payload.id;
     const body = await req.json();
-    const { universitas, fakultas, jurusan, semester_berjalan, ipk_terakhir, no_hp, alamat_domisili, foto_profil } = body;
-
-    // Check if profile exists
-    const existing = await db.select().from(profil_user).where(eq(profil_user.id, userId));
-    
-    const updateData = {
+    const {
+      profesi,
+      instansi,
+      sektor_industri,
+      pengalaman_tahun,
+      bidang_keahlian,
+      bio_profesional,
+      pendidikan_terakhir,
       universitas,
-      fakultas,
       jurusan,
-      semester_berjalan,
-      ipk_terakhir: ipk_terakhir ? parseFloat(ipk_terakhir) : null,
       no_hp,
-      alamat_domisili
+      email_profesional,
+      linkedin_url,
+      alamat_domisili,
+      foto_profil,
+    } = body;
+
+    if (
+      !profesi?.trim() ||
+      !instansi?.trim() ||
+      !sektor_industri?.trim() ||
+      !pengalaman_tahun?.trim() ||
+      !pendidikan_terakhir?.trim() ||
+      !universitas?.trim() ||
+      !jurusan?.trim() ||
+      !no_hp?.trim() ||
+      !email_profesional?.trim() ||
+      !alamat_domisili?.trim()
+    ) {
+      return NextResponse.json(
+        { error: 'Mohon lengkapi seluruh kolom profil profesional yang bertanda bintang (*).' },
+        { status: 400 }
+      );
+    }
+
+    const existing = await db.select().from(profil_user).where(eq(profil_user.id, userId));
+
+    const updateData = {
+      profesi: profesi.trim(),
+      instansi: instansi.trim(),
+      sektor_industri: sektor_industri.trim(),
+      pengalaman_tahun: pengalaman_tahun.trim(),
+      bidang_keahlian: (bidang_keahlian || '').trim(),
+      bio_profesional: (bio_profesional || '').trim(),
+      pendidikan_terakhir: pendidikan_terakhir.trim(),
+      universitas: universitas.trim(),
+      jurusan: jurusan.trim(),
+      no_hp: no_hp.trim(),
+      email_profesional: email_profesional.trim(),
+      linkedin_url: (linkedin_url || '').trim(),
+      alamat_domisili: alamat_domisili.trim(),
     };
 
     if (foto_profil !== undefined) {
       updateData.foto_profil = foto_profil;
-      // Also sync avatar_url on users table
       await db.update(users).set({ avatar_url: foto_profil }).where(eq(users.id, userId));
     }
 
     if (existing.length > 0) {
-      await db.update(profil_user)
-        .set(updateData)
-        .where(eq(profil_user.id, userId));
+      await db.update(profil_user).set(updateData).where(eq(profil_user.id, userId));
     } else {
       await db.insert(profil_user).values({
         id: userId,
-        ...updateData
+        ...updateData,
       });
     }
 
-    return NextResponse.json({ success: true, message: 'Profil berhasil diperbarui' }, { status: 200 });
-
-
+    return NextResponse.json({ success: true, message: 'Profil profesional berhasil disimpan' }, { status: 200 });
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

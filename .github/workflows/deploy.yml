@@ -35,6 +35,15 @@ jobs:
           npx wrangler d1 execute portal-etos-id-d1 --remote --command "ALTER TABLE agendas ADD COLUMN assignment_file_url TEXT;" || true
           npx wrangler d1 execute portal-etos-id-d1 --remote --command "ALTER TABLE agendas ADD COLUMN assignment_link TEXT;" || true
           npx wrangler d1 execute portal-etos-id-d1 --remote --command "CREATE TABLE IF NOT EXISTS agenda_submissions (id TEXT PRIMARY KEY, agenda_id TEXT NOT NULL, user_id TEXT NOT NULL, file_name TEXT, file_url TEXT, link_url TEXT, notes TEXT, submitted_at TEXT NOT NULL);" || true
+          npx wrangler d1 execute portal-etos-id-d1 --remote --command "ALTER TABLE profil_user ADD COLUMN profesi TEXT;" || true
+          npx wrangler d1 execute portal-etos-id-d1 --remote --command "ALTER TABLE profil_user ADD COLUMN instansi TEXT;" || true
+          npx wrangler d1 execute portal-etos-id-d1 --remote --command "ALTER TABLE profil_user ADD COLUMN sektor_industri TEXT;" || true
+          npx wrangler d1 execute portal-etos-id-d1 --remote --command "ALTER TABLE profil_user ADD COLUMN pengalaman_tahun TEXT;" || true
+          npx wrangler d1 execute portal-etos-id-d1 --remote --command "ALTER TABLE profil_user ADD COLUMN bidang_keahlian TEXT;" || true
+          npx wrangler d1 execute portal-etos-id-d1 --remote --command "ALTER TABLE profil_user ADD COLUMN bio_profesional TEXT;" || true
+          npx wrangler d1 execute portal-etos-id-d1 --remote --command "ALTER TABLE profil_user ADD COLUMN pendidikan_terakhir TEXT;" || true
+          npx wrangler d1 execute portal-etos-id-d1 --remote --command "ALTER TABLE profil_user ADD COLUMN email_profesional TEXT;" || true
+          npx wrangler d1 execute portal-etos-id-d1 --remote --command "ALTER TABLE profil_user ADD COLUMN linkedin_url TEXT;" || true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

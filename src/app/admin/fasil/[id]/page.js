@@ -126,13 +126,17 @@ export default function FasilDetailPage({ params }) {
       </div>
 
       {/* Profil Card */}
-      <div className="bg-white/80 backdrop-blur-md rounded-2xl md:rounded-3xl border border-slate-200/80 p-4 md:p-6 shadow-sm">
+      <div className="bg-white/80 backdrop-blur-md rounded-2xl md:rounded-3xl border border-slate-200/80 p-4 md:p-6 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           
           {/* Main User Identity */}
           <div className="flex items-center gap-3 md:gap-4 min-w-0">
-            <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-teal-600 text-white flex items-center justify-center font-black text-lg md:text-xl shadow-sm shrink-0">
-              {fasil.name?.charAt(0).toUpperCase()}
+            <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-teal-600 text-white flex items-center justify-center font-black text-lg md:text-xl shadow-sm shrink-0 overflow-hidden">
+              {fasil.avatar_url ? (
+                <img src={fasil.avatar_url} alt={fasil.name} className="w-full h-full object-cover" />
+              ) : (
+                fasil.name?.charAt(0).toUpperCase()
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
@@ -145,7 +149,7 @@ export default function FasilDetailPage({ params }) {
               </div>
               <p className="text-xs text-teal-700 font-semibold font-mono">{fasil.id}</p>
               <p className="text-xs text-slate-500 truncate mt-0.5">
-                Fasilitator • Wilayah {fasil.wilayah}
+                {[fasil.profesi, fasil.instansi].filter(Boolean).join(' • ') || `Fasilitator • Wilayah ${fasil.wilayah}`}
               </p>
             </div>
           </div>
@@ -176,6 +180,32 @@ export default function FasilDetailPage({ params }) {
           </div>
 
         </div>
+
+        {/* Profil Profesional Tambahan */}
+        {(fasil.profesi || fasil.pendidikan_terakhir || fasil.no_hp || fasil.email_profesional) && (
+          <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
+            <div className="bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+              <span className="text-[10px] font-bold text-slate-400 uppercase block">Karier / Instansi</span>
+              <p className="font-bold text-slate-800 truncate">{fasil.profesi || '-'}</p>
+              <p className="text-slate-500 truncate">{fasil.instansi || '-'}</p>
+            </div>
+            <div className="bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+              <span className="text-[10px] font-bold text-slate-400 uppercase block">Keahlian & Pengalaman</span>
+              <p className="font-bold text-slate-800 truncate">{fasil.bidang_keahlian || '-'}</p>
+              <p className="text-slate-500 truncate">{fasil.pengalaman_tahun ? `Pengalaman: ${fasil.pengalaman_tahun}` : '-'}</p>
+            </div>
+            <div className="bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+              <span className="text-[10px] font-bold text-slate-400 uppercase block">Pendidikan Terakhir</span>
+              <p className="font-bold text-slate-800 truncate">{fasil.pendidikan_terakhir ? `${fasil.pendidikan_terakhir} • ${fasil.jurusan || ''}` : '-'}</p>
+              <p className="text-slate-500 truncate">{fasil.universitas || '-'}</p>
+            </div>
+            <div className="bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+              <span className="text-[10px] font-bold text-slate-400 uppercase block">Kontak & Jejaring</span>
+              <p className="font-bold text-slate-800 truncate">{fasil.no_hp ? `WA: +62 ${fasil.no_hp.replace(/^\+?62|^0/, '')}` : '-'}</p>
+              <p className="text-slate-500 truncate">{fasil.email_profesional || fasil.linkedin_url || '-'}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Evaluasi Sections Accordion */}

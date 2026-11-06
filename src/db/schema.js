@@ -114,6 +114,16 @@ export const profil_user = sqliteTable('profil_user', {
   no_hp: text('no_hp'),
   alamat_domisili: text('alamat_domisili'),
   foto_profil: text('foto_profil'),
+  // Professional fields (Fasilitator / Mitra Program)
+  profesi: text('profesi'),
+  instansi: text('instansi'),
+  sektor_industri: text('sektor_industri'),
+  pengalaman_tahun: text('pengalaman_tahun'),
+  bidang_keahlian: text('bidang_keahlian'),
+  bio_profesional: text('bio_profesional'),
+  pendidikan_terakhir: text('pendidikan_terakhir'),
+  email_profesional: text('email_profesional'),
+  linkedin_url: text('linkedin_url'),
 });
 
 
