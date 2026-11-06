@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 
 import PwaRegister from "@/components/pwa/PwaRegister";
 import PwaInstallPrompt from "@/components/pwa/PwaInstallPrompt";
+import PullToRefresh from "@/components/pwa/PullToRefresh";
 import GlobalToaster from "@/components/common/GlobalToaster";
 
 export const viewport = {
@@ -61,6 +62,7 @@ export default function RootLayout({ children }) {
     >
       <body className="min-h-full flex flex-col">
         <GlobalToaster />
+        <PullToRefresh />
         <PwaRegister />
         {children}
         <PwaInstallPrompt />
