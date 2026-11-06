@@ -10,8 +10,6 @@ import {
   TrendingDown,
   CalendarCheck,
   ClipboardCheck,
-  ChevronRight,
-  ChevronLeft,
   Clock,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -191,45 +189,6 @@ export default function EtoserDashboard() {
 
           {/* SWIPEABLE DARK NAVY ANALYTICS HERO CAROUSEL */}
           <div className="space-y-2.5">
-            {/* Compact Identity Pills & Slide Switcher */}
-            <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] md:text-xs font-extrabold text-sky-800 bg-sky-100/90 border border-sky-200/80 px-2.5 py-1 rounded-full">
-                  Angkatan {dashboardData?.angkatan || '-'}
-                </span>
-                <span className="text-[10px] md:text-xs font-bold text-slate-700 bg-white/80 border border-slate-200/80 px-2.5 py-1 rounded-full">
-                  Wilayah {dashboardData?.wilayah || '-'}
-                </span>
-                <span className="text-[10px] md:text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2.5 py-1 rounded-full">
-                  Fase {dashboardData?.fase || 'T0'}
-                </span>
-              </div>
-
-              <div className="inline-flex items-center bg-white/80 backdrop-blur-md border border-slate-200/80 p-1 rounded-full shadow-xs select-none">
-                <button
-                  type="button"
-                  onClick={() => goToSlide(0)}
-                  className={`px-3 py-1 rounded-full text-[11px] md:text-xs font-extrabold transition-all cursor-pointer ${
-                    activeSlide === 0
-                      ? 'bg-slate-900 text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  RELI Index
-                </button>
-                <button
-                  type="button"
-                  onClick={() => goToSlide(1)}
-                  className={`px-3 py-1 rounded-full text-[11px] md:text-xs font-extrabold transition-all cursor-pointer ${
-                    activeSlide === 1
-                      ? 'bg-indigo-950 text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Monitoring Bulanan
-                </button>
-              </div>
-            </div>
             <div
               ref={sliderRef}
               onScroll={handleSliderScroll}
@@ -238,23 +197,15 @@ export default function EtoserDashboard() {
             >
               {/* SLIDE 1: RESILIENT LEADERS INDEX (RELI) */}
               <div className="w-full shrink-0 snap-center pr-1.5">
-                <div className="bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 text-white rounded-2xl md:rounded-[2.25rem] p-5 md:p-8 shadow-xl relative overflow-hidden min-h-[230px] flex flex-col justify-between">
+                <div className="bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 text-white rounded-2xl md:rounded-[2.25rem] p-5 md:p-8 shadow-xl relative overflow-hidden min-h-[220px] flex flex-col justify-between">
                   <div className="absolute -top-12 -right-12 w-52 h-52 bg-sky-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
                   <div className="relative z-10">
-                    <div className="flex justify-between items-center gap-2 mb-4">
+                    <div className="mb-4">
                       <span className="inline-flex items-center gap-1.5 text-[10px] md:text-xs font-bold tracking-widest uppercase text-sky-300 bg-sky-900/50 border border-sky-500/30 px-3 py-1 rounded-full">
                         <Compass className="w-3.5 h-3.5" />
                         Resilient Leaders Index
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => goToSlide(1)}
-                        className="inline-flex items-center gap-1 text-[11px] text-sky-300/90 hover:text-white font-bold cursor-pointer"
-                      >
-                        <span>Monitoring Bulanan</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
                     </div>
 
                     {reliData?.hasData ? (
@@ -340,19 +291,11 @@ export default function EtoserDashboard() {
 
               {/* SLIDE 2: MONITORING BULANAN INDIVIDU */}
               <div className="w-full shrink-0 snap-center pl-1.5">
-                <div className="bg-gradient-to-br from-indigo-950 via-slate-900 to-teal-950 text-white rounded-2xl md:rounded-[2.25rem] p-5 md:p-8 shadow-xl relative overflow-hidden min-h-[230px] flex flex-col justify-between">
+                <div className="bg-gradient-to-br from-indigo-950 via-slate-900 to-teal-950 text-white rounded-2xl md:rounded-[2.25rem] p-5 md:p-8 shadow-xl relative overflow-hidden min-h-[220px] flex flex-col justify-between">
                   <div className="absolute -top-12 -left-12 w-52 h-52 bg-teal-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
                   <div className="relative z-10">
-                    <div className="flex justify-between items-center gap-2 mb-4">
-                      <button
-                        type="button"
-                        onClick={() => goToSlide(0)}
-                        className="inline-flex items-center gap-1 text-[11px] text-teal-300/90 hover:text-white font-bold cursor-pointer"
-                      >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                        <span>RELI Index</span>
-                      </button>
+                    <div className="mb-4">
                       <span className="inline-flex items-center gap-1.5 text-[10px] md:text-xs font-bold tracking-widest uppercase text-teal-300 bg-teal-900/50 border border-teal-500/30 px-3 py-1 rounded-full">
                         <ClipboardCheck className="w-3.5 h-3.5" />
                         Monitoring Bulanan
@@ -430,14 +373,14 @@ export default function EtoserDashboard() {
               </div>
             </div>
 
-            {/* Carousel Pagination Dots & Swipe Hint */}
-            <div className="flex items-center justify-center gap-2 select-none">
+            {/* Minimal Carousel Pagination Dots */}
+            <div className="flex items-center justify-center gap-1.5 select-none">
               <button
                 type="button"
                 aria-label="Slide RELI Index"
                 onClick={() => goToSlide(0)}
                 className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                  activeSlide === 0 ? 'w-6 bg-sky-600' : 'w-2 bg-slate-300 hover:bg-slate-400'
+                  activeSlide === 0 ? 'w-5 bg-sky-600' : 'w-1.5 bg-slate-300 hover:bg-slate-400'
                 }`}
               />
               <button
@@ -445,12 +388,9 @@ export default function EtoserDashboard() {
                 aria-label="Slide Monitoring Bulanan"
                 onClick={() => goToSlide(1)}
                 className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                  activeSlide === 1 ? 'w-6 bg-teal-600' : 'w-2 bg-slate-300 hover:bg-slate-400'
+                  activeSlide === 1 ? 'w-5 bg-teal-600' : 'w-1.5 bg-slate-300 hover:bg-slate-400'
                 }`}
               />
-              <span className="text-[10px] font-semibold text-slate-400 ml-1 md:hidden">
-                {activeSlide === 0 ? 'Geser untuk Monitoring →' : '← Geser untuk RELI'}
-              </span>
             </div>
           </div>
 

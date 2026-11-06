@@ -5,13 +5,6 @@ import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import MobileHeaderTools from '@/components/navigation/MobileHeaderTools';
 
-function getMenuSubtitle(pathname) {
-  if (pathname?.startsWith('/etoser/presensi')) return 'Presensi & Agenda';
-  if (pathname?.startsWith('/etoser/monev-bulanan')) return 'Monitoring Bulanan';
-  if (pathname?.startsWith('/etoser/penilaian-mandiri')) return 'Asesmen RELI';
-  return 'Beranda Etoser';
-}
-
 export default function EtoserHeader({ handleLogout }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -83,7 +76,6 @@ export default function EtoserHeader({ handleLogout }) {
   const isProfil = pathname === '/etoser/profil';
   const activeClass = 'text-[#1E1E2D] border-b-2 border-[#1E1E2D] pb-1';
   const inactiveClass = 'hover:text-[#1E1E2D] transition-colors';
-  const menuSubtitle = getMenuSubtitle(pathname);
 
   return (
     <header className="pt-[env(safe-area-inset-top,0px)] min-h-[calc(4rem+env(safe-area-inset-top,0px))] md:min-h-[6rem] px-4 md:px-8 flex items-center justify-between gap-2 shrink-0 bg-white/40 md:bg-white/20 backdrop-blur-md border-b border-white/30 sticky top-0 z-30 transition-all select-none">
@@ -122,11 +114,8 @@ export default function EtoserHeader({ handleLogout }) {
           </div>
         </>
       ) : (
-        <div className="min-w-0 flex flex-col justify-center">
-          <span className="text-[10px] md:text-xs font-extrabold uppercase tracking-wider text-sky-600 leading-none mb-0.5 truncate">
-            {menuSubtitle}
-          </span>
-          <span className="text-sm sm:text-base md:text-lg font-black text-slate-900 truncate max-w-[165px] sm:max-w-[240px] md:max-w-md leading-tight">
+        <div className="min-w-0 flex items-center">
+          <span className="text-sm sm:text-base md:text-lg font-black text-slate-900 truncate max-w-[175px] sm:max-w-[260px] md:max-w-md leading-tight">
             {userName}
           </span>
         </div>
