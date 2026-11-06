@@ -1,16 +1,34 @@
 "use client";
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { User, Trophy, Save, Plus, Trash2, Link as LinkIcon, Loader2, Camera, GraduationCap, Phone, MapPin, AlertCircle } from 'lucide-react';
+import {
+  User,
+  Trophy,
+  Save,
+  Plus,
+  Trash2,
+  Link as LinkIcon,
+  Loader2,
+  Camera,
+  GraduationCap,
+  Phone,
+  MapPin,
+  AlertCircle,
+  CheckCircle2,
+  FileDown,
+} from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { exportEtoserCvPdf } from '@/lib/exportEtoserCvPdf';
 
 export default function ProfilPage() {
   return (
-    <Suspense fallback={
-      <div className="flex justify-center items-center py-20 text-sky-600">
-        <Loader2 className="w-10 h-10 animate-spin" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex justify-center items-center py-20 text-sky-600">
+          <Loader2 className="w-10 h-10 animate-spin" />
+        </div>
+      }
+    >
       <ProfilContent />
     </Suspense>
   );
@@ -19,14 +37,16 @@ export default function ProfilPage() {
 function ProfilContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const currentTab = searchParams ? (searchParams.get('tab') || 'profil') : 'profil';
+  const currentTab = searchParams ? searchParams.get('tab') || 'profil' : 'profil';
   const [activeTab, setActiveTab] = useState(currentTab);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
     const t = searchParams?.get('tab');
-    if (t && (t === 'profil' || t === 'portofolio')) {
+    if (t === 'profil' || t === 'portofolio') {
       setActiveTab(t);
+    } else {
+      setActiveTab('profil');
     }
   }, [searchParams]);
 
@@ -34,11 +54,12 @@ function ProfilContent() {
     setActiveTab(newTab);
     router.push(`/etoser/profil?tab=${newTab}`);
   };
-  
+
   // Profil State
   const [profil, setProfil] = useState({});
   const [loadingProfil, setLoadingProfil] = useState(true);
   const [savingProfil, setSavingProfil] = useState(false);
+  const [exportingCv, setExportingCv] = useState(false);
 
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
@@ -81,14 +102,14 @@ function ProfilContent() {
         ctx.drawImage(img, 0, 0, width, height);
 
         const base64 = canvas.toDataURL('image/jpeg', 0.85);
-        setProfil(prev => ({ ...prev, foto_profil: base64 }));
-        toast.success('Foto berhasil dipilih! Klik "Simpan Perubahan" untuk menerapkan.');
+        setProfil((prev) => ({ ...prev, foto_profil: base64 }));
+        toast.success('Foto dipilih! Klik "Simpan Perubahan" di bawah untuk menerapkan.');
       };
       img.src = event.target.result;
     };
     reader.readAsDataURL(file);
   };
-  
+
   // Portofolio State
   const [portofolios, setPortofolios] = useState([]);
   const [loadingPorto, setLoadingPorto] = useState(true);
@@ -98,7 +119,7 @@ function ProfilContent() {
     judul_karya: '',
     tahun: new Date().getFullYear().toString(),
     deskripsi_singkat: '',
-    link_bukti: ''
+    link_bukti: '',
   });
   const [savingPorto, setSavingPorto] = useState(false);
 
@@ -137,24 +158,64 @@ function ProfilContent() {
     }
   };
 
+  const mandatoryFields = [
+    profil.universitas,
+    profil.fakultas,
+    profil.jurusan,
+    profil.semester_berjalan,
+    profil.ipk_terakhir !== null && profil.ipk_terakhir !== undefined ? String(profil.ipk_terakhir) : '',
+    profil.no_hp,
+    profil.alamat_domisili,
+  ];
+  const filledMandatoryCount = mandatoryFields.filter((v) => String(v || '').trim() !== '').length;
+  const isProfileIncomplete = filledMandatoryCount < mandatoryFields.length;
+
   const handleSaveProfil = async (e) => {
     e.preventDefault();
+    if (isProfileIncomplete) {
+      toast.error('Mohon lengkapi seluruh kolom profil yang wajib diisi.');
+      return;
+    }
+
     setSavingProfil(true);
     try {
       const res = await fetch('/api/etoser/profil', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profil)
+        body: JSON.stringify(profil),
       });
+      const json = await res.json().catch(() => ({}));
       if (res.ok) {
         toast.success('Profil berhasil disimpan!');
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('etoser-profile-updated'));
+        }
       } else {
-        toast.error('Gagal menyimpan profil');
+        toast.error(json.error || 'Gagal menyimpan profil');
       }
     } catch (error) {
-      toast.error('Terjadi kesalahan');
+      toast.error('Terjadi kesalahan jaringan');
     } finally {
       setSavingProfil(false);
+    }
+  };
+
+  const handleExportCv = async () => {
+    setExportingCv(true);
+    const toastId = toast.loading('Menyiapkan dokumen Curriculum Vitae PDF...');
+    try {
+      const res = await fetch('/api/etoser/cv-data');
+      if (!res.ok) {
+        throw new Error('Gagal mengambil data rekap CV');
+      }
+      const payload = await res.json();
+      await exportEtoserCvPdf(payload);
+      toast.success('Curriculum Vitae berhasil diunduh!', { id: toastId });
+    } catch (error) {
+      console.error('Export CV error:', error);
+      toast.error('Gagal mengekspor Curriculum Vitae PDF', { id: toastId });
+    } finally {
+      setExportingCv(false);
     }
   };
 
@@ -165,13 +226,17 @@ function ProfilContent() {
       const res = await fetch('/api/etoser/portofolio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newPorto)
+        body: JSON.stringify(newPorto),
       });
       if (res.ok) {
         toast.success('Portofolio berhasil ditambahkan!');
         setIsAddingPorto(false);
         setNewPorto({
-          kategori: 'Prestasi', judul_karya: '', tahun: new Date().getFullYear().toString(), deskripsi_singkat: '', link_bukti: ''
+          kategori: 'Prestasi',
+          judul_karya: '',
+          tahun: new Date().getFullYear().toString(),
+          deskripsi_singkat: '',
+          link_bukti: '',
         });
         fetchPortofolio();
       } else {
@@ -190,7 +255,7 @@ function ProfilContent() {
       const res = await fetch(`/api/etoser/portofolio?id=${id}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('Portofolio dihapus');
-        setPortofolios(portofolios.filter(p => p.id !== id));
+        setPortofolios(portofolios.filter((p) => p.id !== id));
       }
     } catch (error) {
       toast.error('Gagal menghapus');
@@ -198,81 +263,123 @@ function ProfilContent() {
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20 md:pb-12">
-      
-      {/* Header Section */}
-      <div className="bg-gradient-to-br from-sky-600 via-indigo-600 to-slate-900 rounded-2xl md:rounded-[2.5rem] p-4 md:p-10 text-white shadow-xl relative overflow-hidden">
+    <div className="max-w-[1200px] mx-auto space-y-5 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 py-2 md:py-4 pb-16 md:pb-12">
+      {/* Header Profile Card */}
+      <div className="bg-gradient-to-br from-sky-600 via-indigo-600 to-slate-900 rounded-2xl md:rounded-[2.5rem] p-4 sm:p-5 md:p-10 text-white shadow-xl relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
-          <div className="flex items-center gap-4 md:gap-6">
+          <div className="flex items-center gap-3.5 md:gap-6 min-w-0">
             <div className="relative group shrink-0">
               <div className="w-16 h-16 md:w-24 md:h-24 bg-white/20 backdrop-blur-md rounded-full border-2 md:border-4 border-white/50 overflow-hidden flex items-center justify-center text-2xl md:text-4xl font-black shadow-lg">
                 {profil.foto_profil ? (
-                  <img src={profil.foto_profil} alt={profil.name || 'Avatar'} className="w-full h-full object-cover" />
+                  <img
+                    src={profil.foto_profil}
+                    alt={profil.name || 'Avatar'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : profil.name ? (
+                  profil.name.charAt(0).toUpperCase()
                 ) : (
-                  (profil.name ? profil.name.charAt(0).toUpperCase() : 'E')
+                  'E'
                 )}
               </div>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 p-1.5 md:p-2 bg-white text-sky-600 hover:bg-sky-100 rounded-full shadow-md transition-all hover:scale-110 active:scale-95 cursor-pointer"
-                title="Unggah Foto Profil"
-              >
-                <Camera className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              </button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageUpload}
-              />
+              {activeTab === 'profil' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute bottom-0 right-0 p-1.5 md:p-2 bg-white text-sky-600 hover:bg-sky-100 rounded-full shadow-md transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                    title="Unggah Foto Profil"
+                  >
+                    <Camera className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                  </button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                </>
+              )}
             </div>
-            <div>
-              <h1 className="text-xl md:text-4xl font-black mb-1 md:mb-2 drop-shadow-sm">{profil.name || 'Etoser'}</h1>
-              <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                <span className="bg-white/20 backdrop-blur-md border border-white/40 px-2.5 md:px-4 py-1 md:py-1.5 rounded-full text-xs md:text-sm font-bold tracking-wide">
+
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl md:text-4xl font-black mb-1.5 md:mb-2 drop-shadow-sm truncate">
+                {profil.name || 'Etoser'}
+              </h1>
+              <div className="flex flex-wrap items-center gap-1.5 md:gap-2.5">
+                <span className="bg-white/20 backdrop-blur-md border border-white/40 px-2.5 md:px-3.5 py-0.5 md:py-1 rounded-full text-[11px] md:text-sm font-bold tracking-wide">
                   {profil.id || 'ETOS'}
                 </span>
-                <span className="bg-sky-900/40 backdrop-blur-md border border-sky-400/30 px-2.5 md:px-4 py-1 md:py-1.5 rounded-full text-xs md:text-sm font-bold tracking-wide text-sky-100 flex items-center gap-1">
-                  <User className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <span className="bg-sky-900/40 backdrop-blur-md border border-sky-400/30 px-2.5 md:px-3.5 py-0.5 md:py-1 rounded-full text-[11px] md:text-sm font-bold tracking-wide text-sky-100 flex items-center gap-1">
+                  <User className="w-3 h-3 md:w-4 md:h-4" />
                   Fase {profil.fase || 'T0'}
                 </span>
-                <span className="bg-indigo-900/40 backdrop-blur-md border border-indigo-400/30 px-2.5 md:px-4 py-1 md:py-1.5 rounded-full text-xs md:text-sm font-bold tracking-wide text-indigo-50 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                  Wilayah {profil.wilayah || '-'} (Angkatan {profil.angkatan || '-'})
+                <span className="bg-indigo-900/40 backdrop-blur-md border border-indigo-400/30 px-2.5 md:px-3.5 py-0.5 md:py-1 rounded-full text-[11px] md:text-sm font-bold tracking-wide text-indigo-50 flex items-center gap-1">
+                  <MapPin className="w-3 h-3 md:w-4 md:h-4" />
+                  {profil.wilayah || '-'} • {profil.angkatan || '-'}
                 </span>
               </div>
             </div>
           </div>
-          
-          <button 
-            type="button"
-            onClick={handleSaveProfil}
-            disabled={savingProfil}
-            className="w-full md:w-auto justify-center bg-white text-sky-600 hover:bg-sky-50 px-6 md:px-8 py-2.5 md:py-3.5 rounded-xl md:rounded-2xl text-xs md:text-sm font-black transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
-          >
-            {savingProfil ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" /> : <Save className="w-4 h-4 md:w-5 md:h-5" />}
-            {savingProfil ? 'Menyimpan...' : 'Simpan Profil'}
-          </button>
+
+          {/* Context-Sensitive Action / Status Slot */}
+          {activeTab === 'portofolio' ? (
+            <button
+              type="button"
+              onClick={handleExportCv}
+              disabled={exportingCv}
+              className="w-full md:w-auto justify-center bg-white text-indigo-950 hover:bg-sky-50 px-5 md:px-7 py-3 md:py-3.5 rounded-xl md:rounded-2xl text-xs md:text-sm font-black transition-all shadow-lg active:scale-[0.98] flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer shrink-0"
+            >
+              {exportingCv ? (
+                <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin text-indigo-600" />
+              ) : (
+                <FileDown className="w-4 h-4 md:w-5 md:h-5 text-indigo-600" />
+              )}
+              <span>{exportingCv ? 'Mengunduh PDF...' : 'Export Curriculum Vitae'}</span>
+            </button>
+          ) : !loadingProfil && isProfileIncomplete ? (
+            <div className="w-full md:w-auto bg-amber-400/20 backdrop-blur-md border border-amber-300/40 rounded-xl md:rounded-2xl px-3.5 py-2.5 md:px-4 md:py-3 flex items-start sm:items-center gap-2.5 text-amber-100 shrink-0">
+              <AlertCircle className="w-4 h-4 md:w-5 md:h-5 text-amber-300 shrink-0 mt-0.5 sm:mt-0" />
+              <div className="text-xs leading-snug">
+                <p className="font-extrabold text-white">Lengkapi data profilmu!</p>
+                <p className="text-amber-100/90 text-[11px]">
+                  Semua kolom wajib diisi ({filledMandatoryCount}/7 terisi)
+                </p>
+              </div>
+            </div>
+          ) : !loadingProfil ? (
+            <div className="w-full md:w-auto bg-emerald-400/20 backdrop-blur-md border border-emerald-300/40 rounded-xl md:rounded-2xl px-4 py-2.5 flex items-center justify-center md:justify-start gap-2 text-emerald-100 text-xs font-extrabold shrink-0">
+              <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />
+              <span>Data Profil Lengkap</span>
+            </div>
+          ) : null}
         </div>
-        
+
         {/* Decorative blobs */}
         <div className="absolute right-0 top-0 w-96 h-96 bg-white opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
       </div>
 
-      {/* Tabs - Hidden on mobile because it's handled by top-left dropdown in header */}
+      {/* Desktop Sub-Tabs (Mobile handled by top-left pill selector in EtoserHeader) */}
       <div className="hidden md:flex gap-4 border-b border-sky-200">
-        <button 
+        <button
           onClick={() => handleTabChange('profil')}
-          className={`pb-4 px-4 font-bold text-lg flex items-center gap-2 transition-all ${activeTab === 'profil' ? 'text-sky-600 border-b-4 border-sky-600' : 'text-sky-900/50 hover:text-sky-600'}`}
+          className={`pb-4 px-4 font-bold text-lg flex items-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'profil'
+              ? 'text-sky-600 border-b-4 border-sky-600'
+              : 'text-sky-900/50 hover:text-sky-600'
+          }`}
         >
           <User className="w-5 h-5" />
           Profil Saya
         </button>
-        <button 
+        <button
           onClick={() => handleTabChange('portofolio')}
-          className={`pb-4 px-4 font-bold text-lg flex items-center gap-2 transition-all ${activeTab === 'portofolio' ? 'text-indigo-600 border-b-4 border-indigo-600' : 'text-sky-900/50 hover:text-indigo-600'}`}
+          className={`pb-4 px-4 font-bold text-lg flex items-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'portofolio'
+              ? 'text-indigo-600 border-b-4 border-indigo-600'
+              : 'text-sky-900/50 hover:text-indigo-600'
+          }`}
         >
           <Trophy className="w-5 h-5" />
           Portofolio Karya
@@ -292,81 +399,105 @@ function ProfilContent() {
               <Loader2 className="w-10 h-10 animate-spin" />
             </div>
           ) : (
-            <div className="space-y-6 md:space-y-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+            <div className="space-y-5 md:space-y-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-8">
                 {/* Info Akademik */}
-                <div className="bg-white/70 backdrop-blur-xl border border-white/80 p-4 md:p-8 rounded-2xl md:rounded-[2rem] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                <div className="bg-white/75 backdrop-blur-xl border border-white/80 p-4 sm:p-5 md:p-8 rounded-2xl md:rounded-[2rem] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
                     <GraduationCap className="w-32 h-32 text-sky-500" />
                   </div>
-                  
-                  <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-8 relative z-10">
+
+                  <div className="flex items-center gap-3 md:gap-4 mb-5 md:mb-8 relative z-10">
                     <div className="p-2.5 md:p-3 bg-sky-100 rounded-xl md:rounded-2xl text-sky-600">
                       <GraduationCap className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
-                    <h2 className="text-xl md:text-2xl font-black text-slate-800">Informasi Akademik</h2>
+                    <div>
+                      <h2 className="text-lg md:text-2xl font-black text-slate-800">
+                        Informasi Akademik
+                      </h2>
+                      <p className="text-xs text-slate-500 font-medium">Seluruh kolom wajib diisi</p>
+                    </div>
                   </div>
 
-                  <div className="space-y-5 relative z-10">
+                  <div className="space-y-4 md:space-y-5 relative z-10">
                     <div>
-                      <label className="text-sm font-bold text-slate-700 block mb-2">Universitas</label>
-                      <input 
-                        type="text" 
+                      <label className="text-sm font-bold text-slate-700 block mb-1.5">
+                        Universitas <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
                         name="universitas"
+                        required
                         value={profil.universitas || ''}
-                        onChange={(e) => setProfil({...profil, universitas: e.target.value})}
+                        onChange={(e) => setProfil({ ...profil, universitas: e.target.value })}
                         placeholder="Contoh: Universitas Indonesia"
-                        className="w-full px-5 py-3.5 bg-slate-50/50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500/50 transition-all placeholder:text-slate-400"
+                        className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500/50 transition-all placeholder:text-slate-400"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm font-bold text-slate-700 block mb-2">Fakultas</label>
-                        <input 
-                          type="text" 
+                        <label className="text-sm font-bold text-slate-700 block mb-1.5">
+                          Fakultas <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
                           name="fakultas"
+                          required
                           value={profil.fakultas || ''}
-                          onChange={(e) => setProfil({...profil, fakultas: e.target.value})}
+                          onChange={(e) => setProfil({ ...profil, fakultas: e.target.value })}
                           placeholder="Contoh: MIPA"
-                          className="w-full px-5 py-3.5 bg-slate-50/50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500/50 transition-all placeholder:text-slate-400"
+                          className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500/50 transition-all placeholder:text-slate-400"
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-bold text-slate-700 block mb-2">Jurusan</label>
-                        <input 
-                          type="text" 
+                        <label className="text-sm font-bold text-slate-700 block mb-1.5">
+                          Jurusan / Prodi <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
                           name="jurusan"
+                          required
                           value={profil.jurusan || ''}
-                          onChange={(e) => setProfil({...profil, jurusan: e.target.value})}
+                          onChange={(e) => setProfil({ ...profil, jurusan: e.target.value })}
                           placeholder="Contoh: Matematika"
-                          className="w-full px-5 py-3.5 bg-slate-50/50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500/50 transition-all placeholder:text-slate-400"
+                          className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500/50 transition-all placeholder:text-slate-400"
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-5">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm font-bold text-slate-700 block mb-2">Semester Berjalan</label>
-                        <input 
-                          type="number" 
+                        <label className="text-sm font-bold text-slate-700 block mb-1.5">
+                          Semester Berjalan <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="number"
                           name="semester_berjalan"
+                          required
                           value={profil.semester_berjalan || ''}
-                          onChange={(e) => setProfil({...profil, semester_berjalan: e.target.value})}
-                          placeholder="Contoh: 5"
-                          className="w-full px-5 py-3.5 bg-slate-50/50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500/50 transition-all placeholder:text-slate-400"
-                          min="1" max="14"
+                          onChange={(e) =>
+                            setProfil({ ...profil, semester_berjalan: e.target.value })
+                          }
+                          placeholder="Contoh: 3"
+                          className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500/50 transition-all placeholder:text-slate-400"
+                          min="1"
+                          max="14"
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-bold text-slate-700 block mb-2">IPK Terakhir</label>
-                        <input 
-                          type="number" 
+                        <label className="text-sm font-bold text-slate-700 block mb-1.5">
+                          IPK Terakhir <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="number"
                           step="0.01"
                           name="ipk_terakhir"
-                          value={profil.ipk_terakhir || ''}
-                          onChange={(e) => setProfil({...profil, ipk_terakhir: e.target.value})}
+                          required
+                          value={profil.ipk_terakhir ?? ''}
+                          onChange={(e) => setProfil({ ...profil, ipk_terakhir: e.target.value })}
                           placeholder="Contoh: 3.85"
-                          className="w-full px-5 py-3.5 bg-slate-50/50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500/50 transition-all placeholder:text-slate-400"
-                          min="0" max="4.00"
+                          className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500/50 transition-all placeholder:text-slate-400"
+                          min="0"
+                          max="4.00"
                         />
                       </div>
                     </div>
@@ -374,61 +505,80 @@ function ProfilContent() {
                 </div>
 
                 {/* Info Kontak & Alamat */}
-                <div className="bg-white/70 backdrop-blur-xl border border-white/80 p-4 md:p-8 rounded-2xl md:rounded-[2rem] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                <div className="bg-white/75 backdrop-blur-xl border border-white/80 p-4 sm:p-5 md:p-8 rounded-2xl md:rounded-[2rem] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
                     <Phone className="w-32 h-32 text-indigo-500" />
                   </div>
-                  
-                  <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-8 relative z-10">
+
+                  <div className="flex items-center gap-3 md:gap-4 mb-5 md:mb-8 relative z-10">
                     <div className="p-2.5 md:p-3 bg-indigo-100 rounded-xl md:rounded-2xl text-indigo-600">
                       <Phone className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
-                    <h2 className="text-xl md:text-2xl font-black text-slate-800">Kontak & Alamat</h2>
+                    <div>
+                      <h2 className="text-lg md:text-2xl font-black text-slate-800">
+                        Kontak & Alamat
+                      </h2>
+                      <p className="text-xs text-slate-500 font-medium">Seluruh kolom wajib diisi</p>
+                    </div>
                   </div>
 
-                  <div className="space-y-5 relative z-10">
+                  <div className="space-y-4 md:space-y-5 relative z-10">
                     <div>
-                      <label className="text-sm font-bold text-slate-700 block mb-2">Nomor WhatsApp / HP</label>
+                      <label className="text-sm font-bold text-slate-700 block mb-1.5">
+                        Nomor WhatsApp / HP <span className="text-rose-500">*</span>
+                      </label>
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">+62</span>
-                        <input 
-                          type="tel" 
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">
+                          +62
+                        </span>
+                        <input
+                          type="tel"
                           name="no_hp"
+                          required
                           value={profil.no_hp || ''}
-                          onChange={(e) => setProfil({...profil, no_hp: e.target.value})}
+                          onChange={(e) => setProfil({ ...profil, no_hp: e.target.value })}
                           placeholder="81234567890"
-                          className="w-full pl-14 pr-5 py-3.5 bg-slate-50/50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all placeholder:text-slate-400"
+                          className="w-full pl-14 pr-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all placeholder:text-slate-400"
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm font-bold text-slate-700 block mb-2">Alamat Domisili</label>
-                      <textarea 
+                      <label className="text-sm font-bold text-slate-700 block mb-1.5">
+                        Alamat Domisili <span className="text-rose-500">*</span>
+                      </label>
+                      <textarea
                         name="alamat_domisili"
+                        required
                         value={profil.alamat_domisili || ''}
-                        onChange={(e) => setProfil({...profil, alamat_domisili: e.target.value})}
+                        onChange={(e) => setProfil({ ...profil, alamat_domisili: e.target.value })}
                         rows="4"
                         placeholder="Tuliskan alamat lengkap domisili Anda saat ini..."
-                        className="w-full px-5 py-3.5 bg-slate-50/50 border border-slate-200 rounded-xl text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all placeholder:text-slate-400 resize-none"
+                        className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/50 transition-all placeholder:text-slate-400 resize-none"
                       ></textarea>
                     </div>
-                    
-                    <div className="mt-6 bg-sky-50 border border-sky-100 p-4 rounded-xl flex gap-3 text-sky-800">
-                      <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-sky-600" />
-                      <p className="text-sm font-medium">Pastikan nomor handphone aktif dan terhubung dengan WhatsApp untuk mempermudah komunikasi pembinaan.</p>
+
+                    <div className="mt-4 bg-sky-50 border border-sky-100 p-3.5 rounded-xl flex gap-2.5 text-sky-800">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-sky-600" />
+                      <p className="text-xs sm:text-sm font-medium">
+                        Pastikan nomor handphone aktif dan terhubung dengan WhatsApp untuk mempermudah komunikasi pembinaan.
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end pt-4">
-                <button 
+              <div className="flex justify-end pt-2">
+                <button
                   type="submit"
                   disabled={savingProfil}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white font-bold px-8 py-3.5 rounded-xl shadow-md transition-all disabled:opacity-70 active:scale-95"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white font-bold px-8 py-3.5 rounded-xl shadow-md transition-all disabled:opacity-70 active:scale-95 cursor-pointer"
                 >
-                  {savingProfil ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                  Simpan Perubahan
+                  {savingProfil ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Save className="w-5 h-5" />
+                  )}
+                  <span>Simpan Perubahan</span>
                 </button>
               </div>
             </div>
@@ -438,13 +588,19 @@ function ProfilContent() {
 
       {/* Portofolio Tab Content */}
       {activeTab === 'portofolio' && (
-        <div className="space-y-6">
-          
+        <div className="space-y-5 md:space-y-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h3 className="text-lg md:text-xl font-bold text-indigo-950">Daftar Portofolio / Prestasi</h3>
-            <button 
+            <div>
+              <h3 className="text-lg md:text-xl font-bold text-indigo-950">
+                Daftar Portofolio / Prestasi
+              </h3>
+              <p className="text-xs text-slate-500 font-medium">
+                Seluruh karya & prestasi di bawah akan otomatis masuk ke dokumen Export CV.
+              </p>
+            </div>
+            <button
               onClick={() => setIsAddingPorto(!isAddingPorto)}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-md transition-all active:scale-95 text-sm md:text-base"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-md transition-all active:scale-95 text-sm md:text-base cursor-pointer"
             >
               <Plus className="w-5 h-5" />
               {isAddingPorto ? 'Batal Tambah' : 'Tambah Portofolio'}
@@ -452,16 +608,21 @@ function ProfilContent() {
           </div>
 
           {isAddingPorto && (
-            <form onSubmit={handleSavePorto} className="bg-white/80 backdrop-blur-md border-2 border-indigo-200 rounded-2xl md:rounded-[2rem] p-4 md:p-8 shadow-lg animate-in fade-in zoom-in-95">
-              <h4 className="text-base md:text-lg font-bold text-indigo-900 mb-4 md:mb-6">Tambah Portofolio Baru</h4>
-              
+            <form
+              onSubmit={handleSavePorto}
+              className="bg-white/85 backdrop-blur-md border-2 border-indigo-200 rounded-2xl md:rounded-[2rem] p-4 md:p-8 shadow-lg animate-in fade-in zoom-in-95"
+            >
+              <h4 className="text-base md:text-lg font-bold text-indigo-900 mb-4 md:mb-6">
+                Tambah Portofolio Baru
+              </h4>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <div>
                   <label className="text-xs sm:text-sm font-bold text-indigo-900">Kategori</label>
-                  <select 
+                  <select
                     value={newPorto.kategori}
-                    onChange={(e) => setNewPorto({...newPorto, kategori: e.target.value})}
-                    className="w-full mt-1 px-3.5 py-2 sm:px-4 sm:py-2 text-sm sm:text-base bg-white/50 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    onChange={(e) => setNewPorto({ ...newPorto, kategori: e.target.value })}
+                    className="w-full mt-1 px-3.5 py-2.5 text-sm sm:text-base bg-white border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   >
                     <option value="Prestasi">Prestasi / Kejuaraan</option>
                     <option value="Organisasi">Organisasi / Kepanitiaan</option>
@@ -471,52 +632,65 @@ function ProfilContent() {
                 </div>
                 <div>
                   <label className="text-xs sm:text-sm font-bold text-indigo-900">Tahun</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
+                    required
                     value={newPorto.tahun}
-                    onChange={(e) => setNewPorto({...newPorto, tahun: e.target.value})}
-                    className="w-full mt-1 px-3.5 py-2 sm:px-4 sm:py-2 text-sm sm:text-base bg-white/50 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    onChange={(e) => setNewPorto({ ...newPorto, tahun: e.target.value })}
+                    className="w-full mt-1 px-3.5 py-2.5 text-sm sm:text-base bg-white border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="text-xs sm:text-sm font-bold text-indigo-900">Judul Karya / Prestasi / Jabatan</label>
-                  <input 
-                    type="text" 
+                  <label className="text-xs sm:text-sm font-bold text-indigo-900">
+                    Judul Karya / Prestasi / Jabatan
+                  </label>
+                  <input
+                    type="text"
                     required
                     value={newPorto.judul_karya}
-                    onChange={(e) => setNewPorto({...newPorto, judul_karya: e.target.value})}
-                    className="w-full mt-1 px-3.5 py-2 sm:px-4 sm:py-2 text-sm sm:text-base bg-white/50 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    onChange={(e) => setNewPorto({ ...newPorto, judul_karya: e.target.value })}
+                    className="w-full mt-1 px-3.5 py-2.5 text-sm sm:text-base bg-white border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     placeholder="Contoh: Juara 1 Lomba Essay Nasional"
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="text-xs sm:text-sm font-bold text-indigo-900">Deskripsi Singkat</label>
-                  <textarea 
+                  <label className="text-xs sm:text-sm font-bold text-indigo-900">
+                    Deskripsi Singkat
+                  </label>
+                  <textarea
                     value={newPorto.deskripsi_singkat}
-                    onChange={(e) => setNewPorto({...newPorto, deskripsi_singkat: e.target.value})}
-                    className="w-full mt-1 px-3.5 py-2 sm:px-4 sm:py-2 text-sm sm:text-base bg-white/50 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none h-20 resize-none"
+                    onChange={(e) =>
+                      setNewPorto({ ...newPorto, deskripsi_singkat: e.target.value })
+                    }
+                    className="w-full mt-1 px-3.5 py-2.5 text-sm sm:text-base bg-white border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none h-20 resize-none"
                     placeholder="Jelaskan peran atau pencapaianmu..."
                   ></textarea>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="text-xs sm:text-sm font-bold text-indigo-900">Link Bukti (Opsional)</label>
-                  <input 
-                    type="url" 
+                  <label className="text-xs sm:text-sm font-bold text-indigo-900">
+                    Link Bukti (Opsional)
+                  </label>
+                  <input
+                    type="url"
                     value={newPorto.link_bukti}
-                    onChange={(e) => setNewPorto({...newPorto, link_bukti: e.target.value})}
-                    className="w-full mt-1 px-3.5 py-2 sm:px-4 sm:py-2 text-sm sm:text-base bg-white/50 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    onChange={(e) => setNewPorto({ ...newPorto, link_bukti: e.target.value })}
+                    className="w-full mt-1 px-3.5 py-2.5 text-sm sm:text-base bg-white border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     placeholder="https://..."
                   />
                 </div>
               </div>
 
               <div className="flex justify-end mt-6">
-                <button 
+                <button
                   type="submit"
                   disabled={savingPorto}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md transition-all disabled:opacity-70 active:scale-95"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md transition-all disabled:opacity-70 active:scale-95 cursor-pointer"
                 >
-                  {savingPorto ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                  {savingPorto ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Save className="w-5 h-5" />
+                  )}
                   Simpan Portofolio
                 </button>
               </div>
@@ -531,16 +705,20 @@ function ProfilContent() {
             <div className="bg-white/60 backdrop-blur-md border border-white/80 rounded-2xl md:rounded-[2rem] p-8 md:p-12 text-center text-indigo-900/50">
               <Trophy className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-3 md:mb-4 opacity-30" />
               <p className="text-base md:text-lg font-bold">Belum ada portofolio</p>
-              <p className="text-xs md:text-sm">Tambahkan prestasimu untuk melengkapi profil.</p>
+              <p className="text-xs md:text-sm">
+                Tambahkan karya atau prestasimu untuk melengkapi Curriculum Vitae.
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              {portofolios.map(porto => (
-                <div key={porto.id} className="bg-white/70 backdrop-blur-md border border-indigo-100 rounded-2xl md:rounded-[2rem] p-4 md:p-6 shadow-sm hover:shadow-md transition-all group relative">
-                  
-                  <button 
+              {portofolios.map((porto) => (
+                <div
+                  key={porto.id}
+                  className="bg-white/75 backdrop-blur-md border border-indigo-100 rounded-2xl md:rounded-[2rem] p-4 md:p-6 shadow-sm hover:shadow-md transition-all group relative"
+                >
+                  <button
                     onClick={() => handleDeletePorto(porto.id)}
-                    className="absolute top-3 right-3 md:top-4 md:right-4 p-2 text-rose-400 hover:bg-rose-50 hover:text-rose-600 rounded-xl transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100 active:scale-95"
+                    className="absolute top-3 right-3 md:top-4 md:right-4 p-2 text-rose-400 hover:bg-rose-50 hover:text-rose-600 rounded-xl transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100 active:scale-95 cursor-pointer"
                     title="Hapus"
                   >
                     <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
@@ -549,9 +727,13 @@ function ProfilContent() {
                   <span className="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 font-bold text-[10px] md:text-xs rounded-full mb-2 md:mb-3">
                     {porto.kategori}
                   </span>
-                  <h4 className="text-base md:text-xl font-bold text-indigo-950 pr-8 leading-snug">{porto.judul_karya}</h4>
-                  <p className="text-xs md:text-sm font-bold text-indigo-500 mb-2 md:mb-3">{porto.tahun}</p>
-                  
+                  <h4 className="text-base md:text-xl font-bold text-indigo-950 pr-8 leading-snug">
+                    {porto.judul_karya}
+                  </h4>
+                  <p className="text-xs md:text-sm font-bold text-indigo-500 mb-2 md:mb-3">
+                    {porto.tahun}
+                  </p>
+
                   {porto.deskripsi_singkat && (
                     <p className="text-xs md:text-sm text-indigo-900/70 mb-3 md:mb-4 line-clamp-3">
                       {porto.deskripsi_singkat}
@@ -559,7 +741,7 @@ function ProfilContent() {
                   )}
 
                   {porto.link_bukti && (
-                    <a 
+                    <a
                       href={porto.link_bukti}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -573,10 +755,8 @@ function ProfilContent() {
               ))}
             </div>
           )}
-
         </div>
       )}
-
     </div>
   );
 }
