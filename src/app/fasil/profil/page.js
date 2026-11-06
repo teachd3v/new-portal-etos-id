@@ -41,19 +41,6 @@ const EXPERIENCE_OPTIONS = [
 
 const EDUCATION_LEVEL_OPTIONS = ['D4 / S1', 'Profesi', 'S2', 'S3'];
 
-const EXPERTISE_SUGGESTIONS = [
-  'Leadership & Coaching',
-  'Career Preparation',
-  'Public Speaking',
-  'Riset & Akademik',
-  'Kewirausahaan',
-  'Manajemen Proyek',
-  'Community Development',
-  'Psikologi & Konseling',
-  'Teknologi & Data',
-  'Keuangan & Bisnis',
-];
-
 export default function ProfilFasilPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -68,7 +55,6 @@ export default function ProfilFasilPage() {
     instansi: '',
     sektor_industri: '',
     pengalaman_tahun: '',
-    bidang_keahlian: '',
     bio_profesional: '',
     pendidikan_terakhir: '',
     universitas: '',
@@ -153,21 +139,6 @@ export default function ProfilFasilPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setProfilData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const selectedExpertiseList = (profilData.bidang_keahlian || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const toggleExpertiseChip = (topic) => {
-    const exists = selectedExpertiseList.some(
-      (item) => item.toLowerCase() === topic.toLowerCase()
-    );
-    const next = exists
-      ? selectedExpertiseList.filter((item) => item.toLowerCase() !== topic.toLowerCase())
-      : [...selectedExpertiseList, topic];
-    setProfilData((prev) => ({ ...prev, bidang_keahlian: next.join(', ') }));
   };
 
   const mandatoryFields = [
@@ -275,17 +246,17 @@ export default function ProfilFasilPage() {
                   {[profilData.profesi, profilData.instansi].filter(Boolean).join(' • ')}
                 </p>
               )}
-              <div className="flex flex-wrap items-center gap-1.5 md:gap-2.5 mt-2">
-                <span className="bg-black/25 border border-white/25 px-2.5 py-0.5 md:px-3.5 md:py-1 rounded-full text-[11px] md:text-xs font-bold">
+              <div className="flex flex-nowrap items-center gap-1.5 mt-1.5 overflow-x-auto">
+                <span className="bg-black/25 border border-white/20 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0">
                   {profilData.id}
                 </span>
-                <span className="bg-black/25 border border-amber-200/30 px-2.5 py-0.5 md:px-3.5 md:py-1 rounded-full text-[11px] md:text-xs font-bold text-amber-100 inline-flex items-center gap-1">
-                  <User className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                  {profilData.fasil_role || 'Fasilitator'}
+                <span className="bg-black/25 border border-amber-200/25 px-2 py-0.5 rounded-full text-[10px] font-bold text-amber-100 inline-flex items-center gap-1 shrink-0">
+                  <User className="w-2.5 h-2.5" />
+                  <span>{profilData.fasil_role || 'Fasilitator'}</span>
                 </span>
-                <span className="bg-black/25 border border-orange-200/30 px-2.5 py-0.5 md:px-3.5 md:py-1 rounded-full text-[11px] md:text-xs font-bold text-orange-50 inline-flex items-center gap-1">
-                  <MapPin className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                  Wilayah {profilData.wilayah}
+                <span className="bg-black/25 border border-orange-200/25 px-2 py-0.5 rounded-full text-[10px] font-bold text-orange-50 inline-flex items-center gap-1 shrink-0">
+                  <MapPin className="w-2.5 h-2.5" />
+                  <span>{profilData.wilayah}</span>
                 </span>
               </div>
             </div>
@@ -311,25 +282,25 @@ export default function ProfilFasilPage() {
         <div className="absolute -right-12 -top-12 w-72 h-72 bg-amber-300/15 rounded-full blur-3xl pointer-events-none"></div>
       </div>
 
-      {/* CARD A: KARIER & KEAHLIAN PROFESIONAL */}
-      <div className="bg-white/80 backdrop-blur-xl border border-slate-200/80 p-4 md:p-8 rounded-2xl md:rounded-[2rem] shadow-sm space-y-5">
+      {/* CARD A: KARIER PROFESIONAL */}
+      <div className="bg-white/80 backdrop-blur-xl border border-slate-200/80 p-4 md:p-8 rounded-2xl md:rounded-[2rem] shadow-sm space-y-4 md:space-y-5">
         <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
           <div className="p-2.5 bg-orange-100 rounded-xl text-orange-700 shrink-0">
             <Briefcase className="w-5 h-5" />
           </div>
           <div>
             <h2 className="text-base md:text-xl font-black text-slate-900">
-              Karier & Keahlian Profesional
+              Karier Profesional
             </h2>
             <p className="text-xs text-slate-500 font-medium">
-              Informasi pekerjaan utama dan spesialisasi pendampingan Anda sebagai mitra program.
+              Informasi pekerjaan utama dan pengalaman Anda sebagai mitra program.
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-4">
           <div>
-            <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1.5">
+            <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1">
               Posisi / Profesi Saat Ini <span className="text-rose-500">*</span>
             </label>
             <input
@@ -338,12 +309,12 @@ export default function ProfilFasilPage() {
               value={profilData.profesi || ''}
               onChange={handleChange}
               placeholder="Contoh: Management Consultant / Guru SMA / HR Manager"
-              className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400"
+              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs md:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-[11px] md:placeholder:text-xs placeholder:text-slate-400"
             />
           </div>
 
           <div>
-            <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1.5">
+            <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1">
               Instansi / Perusahaan Tempat Bekerja <span className="text-rose-500">*</span>
             </label>
             <input
@@ -352,23 +323,23 @@ export default function ProfilFasilPage() {
               value={profilData.instansi || ''}
               onChange={handleChange}
               placeholder="Contoh: PT Paragon Technology / SMAN 1 Ambon"
-              className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400"
+              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs md:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-[11px] md:placeholder:text-xs placeholder:text-slate-400"
             />
           </div>
 
           <div>
-            <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1.5">
+            <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1">
               Sektor / Bidang Industri <span className="text-rose-500">*</span>
             </label>
             <select
               name="sektor_industri"
               value={profilData.sektor_industri || ''}
               onChange={handleChange}
-              className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs md:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
             >
-              <option value="">Pilih Sektor Industri...</option>
+              <option value="" className="text-xs">Pilih Sektor Industri...</option>
               {INDUSTRY_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>
+                <option key={opt} value={opt} className="text-xs">
                   {opt}
                 </option>
               ))}
@@ -376,18 +347,18 @@ export default function ProfilFasilPage() {
           </div>
 
           <div>
-            <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1.5">
+            <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1">
               Lama Pengalaman Profesional <span className="text-rose-500">*</span>
             </label>
             <select
               name="pengalaman_tahun"
               value={profilData.pengalaman_tahun || ''}
               onChange={handleChange}
-              className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs md:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
             >
-              <option value="">Pilih Rentang Pengalaman...</option>
+              <option value="" className="text-xs">Pilih Rentang Pengalaman...</option>
               {EXPERIENCE_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>
+                <option key={opt} value={opt} className="text-xs">
                   {opt}
                 </option>
               ))}
@@ -395,53 +366,9 @@ export default function ProfilFasilPage() {
           </div>
         </div>
 
-        {/* Bidang Keahlian / Fokus Mentoring */}
-        <div className="space-y-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <label className="text-xs md:text-sm font-bold text-slate-700 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-orange-600" />
-              Bidang Keahlian / Fokus Mentoring
-            </label>
-            <span className="text-[11px] text-slate-400 font-medium">
-              Ketuk topik atau ketik manual
-            </span>
-          </div>
-
-          <div className="flex flex-wrap gap-1.5 md:gap-2">
-            {EXPERTISE_SUGGESTIONS.map((topic) => {
-              const active = selectedExpertiseList.some(
-                (item) => item.toLowerCase() === topic.toLowerCase()
-              );
-              return (
-                <button
-                  key={topic}
-                  type="button"
-                  onClick={() => toggleExpertiseChip(topic)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${
-                    active
-                      ? 'bg-orange-600 text-white border-orange-600 shadow-sm'
-                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-orange-300 hover:text-orange-700'
-                  }`}
-                >
-                  {active ? `✓ ${topic}` : `+ ${topic}`}
-                </button>
-              );
-            })}
-          </div>
-
-          <input
-            type="text"
-            name="bidang_keahlian"
-            value={profilData.bidang_keahlian || ''}
-            onChange={handleChange}
-            placeholder="Pisahkan dengan koma, misal: Leadership & Coaching, Career Preparation, Riset"
-            className="w-full px-4 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs md:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400"
-          />
-        </div>
-
         {/* Bio Profesional */}
         <div>
-          <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1.5">
+          <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1">
             Ringkasan Profesional Singkat (Bio)
           </label>
           <textarea
@@ -450,7 +377,7 @@ export default function ProfilFasilPage() {
             onChange={handleChange}
             rows={3}
             placeholder="Ceritakan secara ringkas latar belakang profesional, fokus karier, dan peran pendampingan Anda..."
-            className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400 resize-none"
+            className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs md:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-[11px] md:placeholder:text-xs placeholder:text-slate-400 resize-none"
           />
         </div>
       </div>
@@ -459,7 +386,7 @@ export default function ProfilFasilPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-7">
         {/* CARD B: PENDIDIKAN TERAKHIR */}
         <div className="bg-white/80 backdrop-blur-xl border border-slate-200/80 p-4 md:p-8 rounded-2xl md:rounded-[2rem] shadow-sm space-y-4 md:space-y-5 flex flex-col justify-between">
-          <div className="space-y-4 md:space-y-5">
+          <div className="space-y-3.5 md:space-y-4">
             <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
               <div className="p-2.5 bg-amber-100 rounded-xl text-amber-700 shrink-0">
                 <GraduationCap className="w-5 h-5" />
@@ -475,18 +402,18 @@ export default function ProfilFasilPage() {
             </div>
 
             <div>
-              <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1.5">
+              <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1">
                 Jenjang Pendidikan Terakhir <span className="text-rose-500">*</span>
               </label>
               <select
                 name="pendidikan_terakhir"
                 value={profilData.pendidikan_terakhir || ''}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs md:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
               >
-                <option value="">Pilih Jenjang Pendidikan...</option>
+                <option value="" className="text-xs">Pilih Jenjang Pendidikan...</option>
                 {EDUCATION_LEVEL_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
+                  <option key={opt} value={opt} className="text-xs">
                     {opt}
                   </option>
                 ))}
@@ -494,7 +421,7 @@ export default function ProfilFasilPage() {
             </div>
 
             <div>
-              <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1.5">
+              <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1">
                 Perguruan Tinggi / Almamater <span className="text-rose-500">*</span>
               </label>
               <input
@@ -503,12 +430,12 @@ export default function ProfilFasilPage() {
                 value={profilData.universitas || ''}
                 onChange={handleChange}
                 placeholder="Contoh: Universitas Gadjah Mada"
-                className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400"
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs md:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-[11px] md:placeholder:text-xs placeholder:text-slate-400"
               />
             </div>
 
             <div>
-              <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1.5">
+              <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1">
                 Bidang Studi / Jurusan <span className="text-rose-500">*</span>
               </label>
               <input
@@ -517,7 +444,7 @@ export default function ProfilFasilPage() {
                 value={profilData.jurusan || ''}
                 onChange={handleChange}
                 placeholder="Contoh: Psikologi Industri & Organisasi"
-                className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400"
+                className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs md:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-[11px] md:placeholder:text-xs placeholder:text-slate-400"
               />
             </div>
           </div>
@@ -539,13 +466,13 @@ export default function ProfilFasilPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 md:gap-4">
             <div>
-              <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1.5">
+              <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1">
                 Nomor WhatsApp Aktif <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-xs md:text-sm text-slate-400">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-xs text-slate-400">
                   +62
                 </span>
                 <input
@@ -554,48 +481,48 @@ export default function ProfilFasilPage() {
                   value={profilData.no_hp || ''}
                   onChange={handleChange}
                   placeholder="81234567890"
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400"
+                  className="w-full pl-11 pr-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs md:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-[11px] md:placeholder:text-xs placeholder:text-slate-400"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1.5">
+              <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1">
                 Email Profesional / Aktif <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
                   name="email_profesional"
                   value={profilData.email_profesional || ''}
                   onChange={handleChange}
                   placeholder="nama@instansi.com"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400"
+                  className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs md:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-[11px] md:placeholder:text-xs placeholder:text-slate-400"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1.5">
+            <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1">
               Tautan LinkedIn / Web Portfolio <span className="text-slate-400 font-normal">(Opsional)</span>
             </label>
             <div className="relative">
-              <Globe className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Globe className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="url"
                 name="linkedin_url"
                 value={profilData.linkedin_url || ''}
                 onChange={handleChange}
                 placeholder="https://www.linkedin.com/in/username"
-                className="w-full pl-10 pr-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400"
+                className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs md:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-[11px] md:placeholder:text-xs placeholder:text-slate-400"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1.5">
+            <label className="text-xs md:text-sm font-bold text-slate-700 block mb-1">
               Domisili Saat Ini <span className="text-rose-500">*</span>
             </label>
             <textarea
@@ -604,7 +531,7 @@ export default function ProfilFasilPage() {
               onChange={handleChange}
               rows={2}
               placeholder="Kota & alamat domisili Anda saat ini..."
-              className="w-full px-4 py-3 bg-slate-50/70 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400 resize-none"
+              className="w-full px-3.5 py-2.5 bg-slate-50/70 border border-slate-200 rounded-xl text-xs md:text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-[11px] md:placeholder:text-xs placeholder:text-slate-400 resize-none"
             />
           </div>
         </div>

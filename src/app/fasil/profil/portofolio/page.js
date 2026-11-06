@@ -217,10 +217,10 @@ export default function FasilPortofolioPage() {
                 <select
                   value={kategori}
                   onChange={(e) => setKategori(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20"
                 >
                   {FASIL_CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
+                    <option key={cat} value={cat} className="text-xs">
                       {cat}
                     </option>
                   ))}
@@ -237,7 +237,7 @@ export default function FasilPortofolioPage() {
                   value={judulKarya}
                   onChange={(e) => setJudulKarya(e.target.value)}
                   placeholder="Contoh: Certified Human Resource Professional (CHRP) / Mentor Inkubasi Bisnis"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 placeholder:text-[11px] md:placeholder:text-xs placeholder:text-slate-400"
                 />
               </div>
 
@@ -248,7 +248,7 @@ export default function FasilPortofolioPage() {
                   required
                   value={tahun}
                   onChange={(e) => setTahun(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 placeholder:text-[11px] md:placeholder:text-xs placeholder:text-slate-400"
                 />
               </div>
 
@@ -261,7 +261,7 @@ export default function FasilPortofolioPage() {
                   value={linkBukti}
                   onChange={(e) => setLinkBukti(e.target.value)}
                   placeholder="https://drive.google.com/... atau tautan verifikasi"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 placeholder:text-[11px] md:placeholder:text-xs placeholder:text-slate-400"
                 />
               </div>
             </div>
@@ -275,7 +275,7 @@ export default function FasilPortofolioPage() {
                 value={deskripsi}
                 onChange={(e) => setDeskripsi(e.target.value)}
                 placeholder="Jelaskan institusi penerbit, ruang lingkup peran fasilitasi, atau dampak dari proyek..."
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 resize-none"
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 resize-none placeholder:text-[11px] md:placeholder:text-xs placeholder:text-slate-400"
               ></textarea>
             </div>
 
