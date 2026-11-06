@@ -25,7 +25,7 @@ export default function EtoserSidebar() {
   ];
 
   return (
-    <div className="hidden md:flex w-24 h-screen flex-col py-8 shrink-0 z-20 drop-shadow-[10px_0_15px_rgba(14,165,233,0.2)] relative">
+    <div className="hidden md:flex w-24 h-screen flex-col py-8 shrink-0 z-20 drop-shadow-[10px_0_15px_rgba(14,165,233,0.2)] relative select-none">
       
       {/* Top Organic S-Curve */}
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-24 h-24 text-sky-600 fill-current shrink-0 -mb-[1px]">

@@ -1,49 +1,90 @@
 export default function manifest() {
   return {
+    id: '/',
     name: 'Portal Etos ID',
     short_name: 'Etos Portal',
-    description: 'Portal Pembinaan & Monitoring Kepemimpinan Etos ID',
+    description: 'Portal Pembinaan, Presensi Agenda & Monitoring Kepemimpinan Etos ID',
     start_url: '/',
+    scope: '/',
     display: 'standalone',
-    background_color: '#F8FAFC',
-    theme_color: '#0F766E',
+    display_override: ['standalone', 'minimal-ui'],
+    background_color: '#FFFFFF',
+    theme_color: '#F0FDFA',
     orientation: 'portrait',
+    categories: ['education', 'productivity'],
+    lang: 'id-ID',
+    dir: 'ltr',
+    prefer_related_applications: false,
     icons: [
+      {
+        src: '/icons/icon-96x96.png',
+        sizes: '96x96',
+        type: 'image/png',
+        purpose: 'any',
+      },
       {
         src: '/icons/icon-192x192.png',
         sizes: '192x192',
         type: 'image/png',
-        purpose: 'any'
+        purpose: 'any',
       },
       {
         src: '/icons/icon-512x512.png',
         sizes: '512x512',
         type: 'image/png',
-        purpose: 'any maskable'
+        purpose: 'any',
       },
       {
-        src: '/favicon.png',
+        src: '/icons/icon-maskable-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+      {
+        src: '/icons/icon-maskable-512x512.png',
         sizes: '512x512',
         type: 'image/png',
-        purpose: 'any'
-      }
+        purpose: 'maskable',
+      },
+    ],
+    screenshots: [
+      {
+        src: '/screenshots/mobile-preview.png',
+        sizes: '720x1280',
+        type: 'image/png',
+        form_factor: 'narrow',
+        label: 'Tampilan Mobile Portal Etos ID',
+      },
+      {
+        src: '/screenshots/desktop-preview.png',
+        sizes: '1280x720',
+        type: 'image/png',
+        form_factor: 'wide',
+        label: 'Dashboard Portal Etos ID',
+      },
     ],
     shortcuts: [
       {
+        name: 'Presensi Agenda',
+        short_name: 'Presensi',
+        url: '/etoser/presensi',
+        description: 'Isi Presensi, Pre/Post Test & Tugas Agenda',
+        icons: [{ src: '/icons/icon-96x96.png', sizes: '96x96', type: 'image/png' }],
+      },
+      {
         name: 'Dashboard Etoser',
+        short_name: 'Etoser',
         url: '/etoser',
-        description: 'Buka Dashboard Etoser'
+        description: 'Buka Dashboard Etoser',
+        icons: [{ src: '/icons/icon-96x96.png', sizes: '96x96', type: 'image/png' }],
       },
       {
         name: 'Dashboard Fasilitator',
+        short_name: 'Fasilitator',
         url: '/fasil',
-        description: 'Buka Dashboard Fasilitator'
+        description: 'Buka Dashboard Fasilitator',
+        icons: [{ src: '/icons/icon-96x96.png', sizes: '96x96', type: 'image/png' }],
       },
-      {
-        name: 'Dashboard Admin',
-        url: '/admin',
-        description: 'Buka Dashboard Administrator'
-      }
-    ]
+    ],
   };
 }

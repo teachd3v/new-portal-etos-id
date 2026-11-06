@@ -25,14 +25,17 @@ export default function EtoserLayout({ children }) {
   const handleLogout = async () => {
     try {
       const res = await fetch('/api/auth/logout', { method: 'POST' });
-      if (res.ok) router.push('/login');
+      if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_AUTH_CACHE' });
+      }
+      if (res.ok) router.replace('/login');
     } catch (error) {
       console.error('Logout failed', error);
     }
   };
 
   return (
-    <div className="fixed inset-0 w-full h-[100dvh] bg-gradient-to-br from-sky-50 via-slate-50 to-indigo-50 font-sans flex text-[#1E1E2D] overflow-hidden select-none">
+    <div className="fixed inset-0 w-full h-[100dvh] bg-gradient-to-br from-sky-50 via-slate-50 to-indigo-50 font-sans flex text-[#1E1E2D] overflow-hidden">
       
       {/* Decorative background blobs to enhance glassmorphism */}
       <div className="absolute top-[-10%] left-[-5%] w-96 h-96 bg-sky-400/20 rounded-full blur-3xl pointer-events-none"></div>
@@ -43,11 +46,11 @@ export default function EtoserLayout({ children }) {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative z-10">
-        <Suspense fallback={<div className="h-16 md:h-24 shrink-0 bg-white/40 md:bg-white/20 backdrop-blur-md border-b border-white/30" />}>
+        <Suspense fallback={<div className="pt-[env(safe-area-inset-top,0px)] min-h-[calc(4rem+env(safe-area-inset-top,0px))] md:min-h-[6rem] shrink-0 bg-white/40 md:bg-white/20 backdrop-blur-md border-b border-white/30" />}>
           <EtoserHeader handleLogout={handleLogout} />
         </Suspense>
         
-        <main id="etoser-content-area" key={pathname} className="flex-1 overflow-y-auto px-4 pb-24 md:px-8 md:pb-8 custom-scrollbar relative z-0">
+        <main id="etoser-content-area" key={pathname} className="flex-1 overflow-y-auto px-4 pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:px-8 md:pb-8 custom-scrollbar relative z-0">
           {children}
         </main>
       </div>

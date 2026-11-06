@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 
 import { useRouter, usePathname } from 'next/navigation';
 import FasilSidebar from '@/components/fasil/FasilSidebar';
@@ -54,7 +54,10 @@ export default function FasilLayout({ children }) {
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/');
+      if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_AUTH_CACHE' });
+      }
+      router.replace('/login');
     } catch (error) {
       console.error(error);
     }
@@ -62,7 +65,7 @@ export default function FasilLayout({ children }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FFF7F0] flex items-center justify-center">
+      <div className="fixed inset-0 h-[100dvh] bg-[#FFF7F0] flex items-center justify-center">
         <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
       </div>
     );
@@ -71,7 +74,7 @@ export default function FasilLayout({ children }) {
   if (!user) return null;
 
   return (
-    <div className="fixed inset-0 w-full h-[100dvh] bg-gradient-to-br from-orange-50 via-slate-50 to-amber-50 font-sans flex text-[#1E1E2D] overflow-hidden select-none">
+    <div className="fixed inset-0 w-full h-[100dvh] bg-gradient-to-br from-orange-50 via-slate-50 to-amber-50 font-sans flex text-[#1E1E2D] overflow-hidden">
       
       {/* Decorative background blobs to enhance glassmorphism */}
       <div className="absolute top-[-10%] left-[-5%] w-96 h-96 bg-orange-400/20 rounded-full blur-3xl pointer-events-none"></div>
@@ -82,12 +85,14 @@ export default function FasilLayout({ children }) {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative z-10">
-        <FasilHeader 
-          userInitial={user.name ? user.name.charAt(0).toUpperCase() : 'F'} 
-          onLogout={handleLogout} 
-        />
+        <Suspense fallback={<div className="pt-[env(safe-area-inset-top,0px)] min-h-[calc(4rem+env(safe-area-inset-top,0px))] md:min-h-[6rem] shrink-0 bg-white/40 md:bg-white/20 backdrop-blur-md border-b border-white/30" />}>
+          <FasilHeader 
+            userInitial={user.name ? user.name.charAt(0).toUpperCase() : 'F'} 
+            onLogout={handleLogout} 
+          />
+        </Suspense>
         
-        <main id="fasil-content-area" key={pathname} className="flex-1 overflow-y-auto px-4 pb-24 md:px-8 md:pb-8 custom-scrollbar relative z-0">
+        <main id="fasil-content-area" key={pathname} className="flex-1 overflow-y-auto px-4 pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:px-8 md:pb-8 custom-scrollbar relative z-0">
           {children}
         </main>
       </div>

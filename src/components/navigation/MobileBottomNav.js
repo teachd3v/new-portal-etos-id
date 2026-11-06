@@ -51,7 +51,7 @@ export default function MobileBottomNav({ role = 'etoser' }) {
   const theme = THEME_STYLES[role] || THEME_STYLES.etoser;
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-2xl border-t border-slate-200/90 shadow-[0_-8px_25px_rgba(0,0,0,0.08)] px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-1.5 transition-all">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-2xl border-t border-slate-200/90 shadow-[0_-8px_25px_rgba(0,0,0,0.08)] pl-[max(0.5rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))] pb-[max(env(safe-area-inset-bottom,0px),0.5rem)] pt-1.5 transition-all select-none">
       <div className="flex justify-around items-center max-w-lg mx-auto">
         {items.map((item, index) => {
           const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);

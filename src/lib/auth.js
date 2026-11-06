@@ -5,14 +5,24 @@ const JWT_SECRET = new TextEncoder().encode(
 );
 
 /**
- * Sign payload to JWT
+ * Sign payload to JWT (30-day persistent mobile session)
  */
 export async function signJwt(payload) {
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('24h')
+    .setExpirationTime('30d')
     .sign(JWT_SECRET);
+}
+
+/**
+ * Resolve default dashboard route based on user role
+ */
+export function getDashboardPathByRole(role) {
+  const normalized = role ? String(role).toUpperCase() : '';
+  if (normalized === 'ADMIN') return '/admin';
+  if (normalized.includes('FASIL')) return '/fasil';
+  return '/etoser';
 }
 
 /**

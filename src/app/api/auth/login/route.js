@@ -40,7 +40,7 @@ export async function POST(req) {
 
     const response = NextResponse.json({ success: true, role: user.role });
     
-    // Set cookie
+    // Set cookie (30 days persistent mobile/PWA session)
     response.cookies.set({
       name: 'auth_token',
       value: token,
@@ -48,7 +48,7 @@ export async function POST(req) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: 60 * 60 * 24 * 30, // 30 days
     });
 
     return response;

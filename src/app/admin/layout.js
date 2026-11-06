@@ -26,7 +26,10 @@ export default function AdminLayout({ children }) {
   const handleLogout = async () => {
     try {
       const res = await fetch('/api/auth/logout', { method: 'POST' });
-      if (res.ok) router.push('/login');
+      if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_AUTH_CACHE' });
+      }
+      if (res.ok) router.replace('/login');
     } catch (error) {
       console.error('Logout failed', error);
     }
@@ -40,14 +43,14 @@ export default function AdminLayout({ children }) {
   ];
 
   return (
-    <div className="fixed inset-0 w-full h-[100dvh] bg-gradient-to-br from-teal-50 via-slate-50 to-emerald-50 font-sans flex text-[#1E1E2D] overflow-hidden select-none">
+    <div className="fixed inset-0 w-full h-[100dvh] bg-gradient-to-br from-teal-50 via-slate-50 to-emerald-50 font-sans flex text-[#1E1E2D] overflow-hidden">
 
       {/* Decorative background blobs to enhance glassmorphism */}
       <div className="absolute top-[-10%] left-[-5%] w-96 h-96 bg-teal-400/20 rounded-full blur-3xl pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-5%] w-[30rem] h-[30rem] bg-emerald-400/20 rounded-full blur-3xl pointer-events-none"></div>
       
       {/* Sidebar Container with drop-shadow for seamless shadow across SVG and div */}
-      <div className="hidden md:flex w-24 h-screen flex-col py-8 shrink-0 z-20 drop-shadow-[10px_0_15px_rgba(15,118,110,0.2)] relative">
+      <div className="hidden md:flex w-24 h-screen flex-col py-8 shrink-0 z-20 drop-shadow-[10px_0_15px_rgba(15,118,110,0.2)] relative select-none">
         
         {/* Top Organic S-Curve */}
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-24 h-24 text-[#0F766E] fill-current shrink-0 -mb-[1px]">
@@ -92,7 +95,7 @@ export default function AdminLayout({ children }) {
         <AdminHeader handleLogout={handleLogout} />
 
         {/* Page Content Scrollable */}
-        <div id="admin-content-area" key={pathname} className="flex-1 overflow-y-auto px-4 pb-24 md:px-8 md:pb-12">
+        <div id="admin-content-area" key={pathname} className="flex-1 overflow-y-auto px-4 pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))] md:px-8 md:pb-12">
           {children}
         </div>
       </main>

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { Search, Bell, LogOut, Loader2, Link as LinkIcon, User, Calendar, ChevronDown, ArrowLeft } from 'lucide-react';
 import { Suspense, useState, useEffect, useRef } from 'react';
+import MobileHeaderTools from '@/components/navigation/MobileHeaderTools';
 
 function HeaderContent({ handleLogout }) {
   const pathname = usePathname();
@@ -58,7 +59,7 @@ function HeaderContent({ handleLogout }) {
   }, [searchQuery]);
 
   return (
-    <header className="h-16 md:h-24 px-4 md:px-8 flex items-center justify-between shrink-0 bg-white/40 md:bg-white/20 backdrop-blur-md border-b border-white/30 sticky top-0 z-30 transition-all">
+    <header className="pt-[env(safe-area-inset-top,0px)] min-h-[calc(4rem+env(safe-area-inset-top,0px))] md:min-h-[6rem] px-4 md:px-8 flex items-center justify-between shrink-0 bg-white/40 md:bg-white/20 backdrop-blur-md border-b border-white/30 sticky top-0 z-30 transition-all select-none">
       {/* Back Button for Detail Pages */}
       {isDetailPage ? (
         <div>
@@ -79,7 +80,7 @@ function HeaderContent({ handleLogout }) {
                 <select
                   value={`/admin?tab=${tab}`}
                   onChange={(e) => router.push(e.target.value)}
-                  className="bg-white/90 backdrop-blur-md border border-teal-200/90 text-teal-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500/30 cursor-pointer max-w-[210px] truncate"
+                  className="header-pill-select bg-white/90 backdrop-blur-md border border-teal-200/90 text-teal-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500/30 cursor-pointer max-w-[165px] sm:max-w-[210px] truncate"
                 >
                   <option value="/admin?tab=etoser">RELI Etoser</option>
                   <option value="/admin?tab=etoser-bulanan">Monitoring Etoser</option>
@@ -93,7 +94,7 @@ function HeaderContent({ handleLogout }) {
                 <select
                   value={`/admin/settings?tab=${tab}`}
                   onChange={(e) => router.push(e.target.value)}
-                  className="bg-white/90 backdrop-blur-md border border-teal-200/90 text-teal-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500/30 cursor-pointer max-w-[210px] truncate"
+                  className="header-pill-select bg-white/90 backdrop-blur-md border border-teal-200/90 text-teal-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500/30 cursor-pointer max-w-[165px] sm:max-w-[210px] truncate"
                 >
                   <option value="/admin/settings?tab=system">Sistem & Periode</option>
                   <option value="/admin/settings?tab=reli">Instrumen RELI</option>
@@ -108,7 +109,7 @@ function HeaderContent({ handleLogout }) {
                 <select
                   value={`/admin/agendas?tab=${tab}`}
                   onChange={(e) => router.push(e.target.value)}
-                  className="bg-white/90 backdrop-blur-md border border-teal-200/90 text-teal-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500/30 cursor-pointer max-w-[210px] truncate"
+                  className="header-pill-select bg-white/90 backdrop-blur-md border border-teal-200/90 text-teal-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500/30 cursor-pointer max-w-[165px] sm:max-w-[210px] truncate"
                 >
                   <option value="/admin/agendas?tab=agenda">Daftar Agenda</option>
                   <option value="/admin/agendas?tab=presensi">Presensi Kehadiran</option>
@@ -132,7 +133,7 @@ function HeaderContent({ handleLogout }) {
                     const qs = params.toString();
                     router.push(`${pathname}${qs ? `?${qs}` : ''}`);
                   }}
-                  className="bg-white/90 backdrop-blur-md border border-teal-200/90 text-teal-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500/30 cursor-pointer max-w-[210px] truncate"
+                  className="header-pill-select bg-white/90 backdrop-blur-md border border-teal-200/90 text-teal-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500/30 cursor-pointer max-w-[165px] sm:max-w-[210px] truncate"
                 >
                   <option value="All Roles">Semua Role</option>
                   <option value="Etoser">Etoser</option>
@@ -224,16 +225,17 @@ function HeaderContent({ handleLogout }) {
           )}
         </div>
         
-        <div className="flex items-center gap-2 md:gap-4 border-l border-teal-200/50 pl-3 md:pl-6 ml-1 md:ml-2">
+        <div className="flex items-center gap-1.5 md:gap-4 border-l border-teal-200/50 pl-2.5 md:pl-6 ml-0.5 md:ml-2">
+          <MobileHeaderTools role="admin" searchEndpoint="/api/admin/search" />
           <button className="w-8 h-8 md:w-10 md:h-10 bg-white/50 backdrop-blur-md border border-white/60 rounded-full flex items-center justify-center text-teal-700 hover:bg-white hover:text-[#0F766E] shadow-sm transition-all">
             <Bell className="w-4 h-4 md:w-5 md:h-5" />
           </button>
           
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-1.5 md:gap-3">
             <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-tr from-[#0F766E] to-teal-400 border-2 border-white/80 shadow-md overflow-hidden flex justify-center items-center text-white font-bold text-xs md:text-sm cursor-pointer hover:scale-105 transition-transform">
               A
             </div>
-            <button onClick={handleLogout} title="Logout" className="w-8 h-8 md:w-10 md:h-10 bg-white/50 backdrop-blur-md border border-white/60 rounded-full flex items-center justify-center text-red-400 hover:bg-white hover:text-red-600 shadow-sm transition-all">
+            <button onClick={handleLogout} title="Logout" className="w-8 h-8 md:w-10 md:h-10 bg-white/50 backdrop-blur-md border border-white/60 rounded-full flex items-center justify-center text-red-400 hover:bg-white hover:text-red-600 shadow-sm transition-all cursor-pointer">
               <LogOut className="w-4 h-4 md:w-5 md:h-5" />
             </button>
           </div>
@@ -245,7 +247,7 @@ function HeaderContent({ handleLogout }) {
 
 export default function AdminHeader({ handleLogout }) {
   return (
-    <Suspense fallback={<header className="h-16 md:h-24 px-4 md:px-8 shrink-0 bg-transparent"></header>}>
+    <Suspense fallback={<header className="pt-[env(safe-area-inset-top,0px)] min-h-[calc(4rem+env(safe-area-inset-top,0px))] md:min-h-[6rem] px-4 md:px-8 shrink-0 bg-transparent"></header>}>
       <HeaderContent handleLogout={handleLogout} />
     </Suspense>
   );

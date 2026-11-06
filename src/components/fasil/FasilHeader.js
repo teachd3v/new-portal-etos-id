@@ -3,6 +3,7 @@ import { User, Bell, LogOut, Search, Loader2, Link as LinkIcon, Calendar, Chevro
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
+import MobileHeaderTools from '@/components/navigation/MobileHeaderTools';
 
 export default function FasilHeader({ userInitial = 'F', onLogout }) {
   const router = useRouter();
@@ -81,7 +82,7 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
   const inactiveClass = "hover:text-[#1E1E2D] transition-colors";
 
   return (
-    <header className="h-16 md:h-24 px-4 md:px-8 flex items-center justify-between shrink-0 bg-white/40 md:bg-white/20 backdrop-blur-md border-b border-white/30 sticky top-0 z-30 transition-all">
+    <header className="pt-[env(safe-area-inset-top,0px)] min-h-[calc(4rem+env(safe-area-inset-top,0px))] md:min-h-[6rem] px-4 md:px-8 flex items-center justify-between shrink-0 bg-white/40 md:bg-white/20 backdrop-blur-md border-b border-white/30 sticky top-0 z-30 transition-all select-none">
       {/* Back Button for Detail Pages */}
       {isDetailPage ? (
         <div>
@@ -102,7 +103,7 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
                 <select
                   value={`/fasil/presensi?tab=${tab}`}
                   onChange={(e) => router.push(e.target.value)}
-                  className="bg-white/90 backdrop-blur-md border border-orange-200/90 text-orange-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-orange-500/30 cursor-pointer max-w-[210px] truncate"
+                  className="header-pill-select bg-white/90 backdrop-blur-md border border-orange-200/90 text-orange-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-orange-500/30 cursor-pointer max-w-[165px] sm:max-w-[210px] truncate"
                 >
                   <option value="/fasil/presensi?tab=self">Presensi Mandiri</option>
                   <option value="/fasil/presensi?tab=monitoring">Pemantauan Binaan</option>
@@ -116,7 +117,7 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
                 <select
                   value={pathname}
                   onChange={(e) => router.push(e.target.value)}
-                  className="bg-white/90 backdrop-blur-md border border-orange-200/90 text-orange-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-orange-500/30 cursor-pointer max-w-[210px] truncate"
+                  className="header-pill-select bg-white/90 backdrop-blur-md border border-orange-200/90 text-orange-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-orange-500/30 cursor-pointer max-w-[165px] sm:max-w-[210px] truncate"
                 >
                   <option value="/fasil/penilaian">Asesmen RELI Binaan</option>
                   <option value="/fasil/penilaian/binaan">Monitoring Bulanan Binaan</option>
@@ -129,7 +130,7 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
                 <select
                   value={pathname}
                   onChange={(e) => router.push(e.target.value)}
-                  className="bg-white/90 backdrop-blur-md border border-orange-200/90 text-orange-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-orange-500/30 cursor-pointer max-w-[210px] truncate"
+                  className="header-pill-select bg-white/90 backdrop-blur-md border border-orange-200/90 text-orange-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-orange-500/30 cursor-pointer max-w-[165px] sm:max-w-[210px] truncate"
                 >
                   <option value="/fasil/profil">Profil Saya</option>
                   <option value="/fasil/profil/portofolio">Portofolio</option>
@@ -213,13 +214,14 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
           )}
         </div>
 
-        <div className="flex items-center gap-2 md:gap-4 border-l border-orange-200/50 pl-3 md:pl-6 ml-1 md:ml-2">
+        <div className="flex items-center gap-1.5 md:gap-4 border-l border-orange-200/50 pl-2.5 md:pl-6 ml-0.5 md:ml-2">
+          <MobileHeaderTools role="fasil" searchEndpoint="/api/fasil/search" />
           <button className="w-8 h-8 md:w-10 md:h-10 bg-white/50 backdrop-blur-md border border-white/60 rounded-full flex items-center justify-center text-orange-700 hover:bg-white hover:text-orange-600 shadow-sm transition-all relative">
             <Bell className="w-4 h-4 md:w-5 md:h-5" />
             <span className="absolute top-1.5 right-1.5 md:top-2 md:right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
           </button>
           
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-1.5 md:gap-3">
             <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 border-2 border-white/80 shadow-md overflow-hidden flex justify-center items-center text-white font-bold text-xs md:text-sm cursor-pointer hover:scale-105 transition-transform">
               {avatarUrl ? (
                 <img src={avatarUrl} alt={userName} className="w-full h-full object-cover" />
@@ -227,7 +229,7 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
                 initial
               )}
             </div>
-            <button onClick={onLogout} title="Logout" className="w-8 h-8 md:w-10 md:h-10 bg-white/50 backdrop-blur-md border border-white/60 rounded-full flex items-center justify-center text-red-400 hover:bg-white hover:text-red-600 shadow-sm transition-all">
+            <button onClick={onLogout} title="Logout" className="w-8 h-8 md:w-10 md:h-10 bg-white/50 backdrop-blur-md border border-white/60 rounded-full flex items-center justify-center text-red-400 hover:bg-white hover:text-red-600 shadow-sm transition-all cursor-pointer">
               <LogOut className="w-4 h-4 md:w-5 md:h-5" />
             </button>
           </div>

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { verifyJwt } from '@/lib/auth';
+import { verifyJwt, getDashboardPathByRole } from '@/lib/auth';
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
@@ -17,6 +17,31 @@ export async function middleware(request) {
   // Verify token
   const payload = token ? await verifyJwt(token) : null;
   const role = payload?.role ? String(payload.role).toUpperCase() : null;
+
+  // 0. Instant Cold-Start Routing for PWA Home ('/') & '/login'
+  if (pathname === '/') {
+    if (payload && role) {
+      return NextResponse.redirect(new URL(getDashboardPathByRole(role), request.url));
+    }
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+  if (pathname === '/login') {
+    if (payload && role) {
+      const requestedRedirect = request.nextUrl.searchParams.get('redirect');
+      const defaultDashboard = getDashboardPathByRole(role);
+      if (
+        requestedRedirect &&
+        requestedRedirect.startsWith('/') &&
+        !requestedRedirect.startsWith('//') &&
+        requestedRedirect !== '/login'
+      ) {
+        return NextResponse.redirect(new URL(requestedRedirect, request.url));
+      }
+      return NextResponse.redirect(new URL(defaultDashboard, request.url));
+    }
+    return NextResponse.next();
+  }
 
   // 1. Protection for API Routes
   if (isApiRoute) {
@@ -70,6 +95,8 @@ export async function middleware(request) {
 
 export const config = {
   matcher: [
+    '/',
+    '/login',
     '/admin/:path*',
     '/fasil/:path*',
     '/etoser/:path*',

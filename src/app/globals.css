@@ -3,6 +3,11 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  color-scheme: light;
 }
 
 @theme inline {
@@ -12,41 +17,75 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+*,
+*::before,
+*::after {
+  -webkit-tap-highlight-color: transparent;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   width: 100%;
   overflow: hidden;
+  overscroll-behavior-y: none;
   margin: 0;
   padding: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
-/* Custom modern scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Instant native touch response (eliminates 300ms double-tap delay) */
+button,
+a,
+select,
+input,
+textarea,
+label,
+[role="button"] {
+  touch-action: manipulation;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+/* Prevent iOS Safari forced viewport auto-zoom when focusing form inputs (< 16px) */
+@media screen and (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea,
+  select:not(.header-pill-select) {
+    font-size: 16px !important;
+  }
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(15, 118, 110, 0.15);
-  border-radius: 9999px;
+/* Native momentum scrolling without whole-window bounce */
+#admin-content-area,
+#fasil-content-area,
+#etoser-content-area,
+.native-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(15, 118, 110, 0.35);
-}
+/* Custom modern scrollbar (hidden on touch mobile for cleaner native look, sleek on desktop) */
+@media (pointer: fine) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
 
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(15, 118, 110, 0.15);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(15, 118, 110, 0.35);
+  }
+}
