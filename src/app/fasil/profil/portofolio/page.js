@@ -69,7 +69,7 @@ export default function FasilPortofolioPage() {
       }
 
       await exportFasilCvPdf(cvPayload);
-      toast.success('Curriculum Vitae Mitra berhasil diunduh!');
+      toast.success('Curriculum Vitae berhasil diunduh!');
     } catch (err) {
       console.error(err);
       toast.error(err.message || 'Gagal mengekspor CV');
@@ -181,7 +181,7 @@ export default function FasilPortofolioPage() {
               ) : (
                 <FileDown className="w-4 h-4" />
               )}
-              <span>Export CV Mitra</span>
+              <span>Export CV</span>
             </button>
 
             <button
