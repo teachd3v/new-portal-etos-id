@@ -72,9 +72,9 @@ export default function EtoserTab() {
     <div className="space-y-8 animate-in fade-in duration-500">
       
       {/* Filters */}
-      <div className="bg-white/60 backdrop-blur-md border border-white/80 rounded-2xl p-3 md:p-4 flex flex-wrap gap-2.5 md:gap-4 shadow-sm items-center">
-        <div className="flex items-center gap-2 md:gap-3 w-full sm:w-auto">
-          <select value={wilayah} onChange={(e) => setWilayah(e.target.value)} className="flex-1 sm:flex-none py-2 md:py-2.5 px-3 md:px-4 bg-white/80 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 text-slate-800 font-semibold shadow-sm">
+      <div className="bg-white/70 backdrop-blur-md border border-slate-200/80 rounded-2xl p-2.5 md:p-3.5 flex flex-col sm:flex-row gap-2 md:gap-3 shadow-sm sm:items-center justify-between">
+        <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
+          <select value={wilayah} onChange={(e) => setWilayah(e.target.value)} className="w-full sm:w-auto py-1.5 md:py-2 px-2.5 md:px-3 bg-white border border-slate-200 rounded-xl text-[11px] md:text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 text-slate-800 font-bold shadow-sm">
             <option value="all">Semua Wilayah</option>
             <option value="Aceh">Aceh</option>
             <option value="Padang">Padang</option>
@@ -83,7 +83,7 @@ export default function EtoserTab() {
             <option value="Makassar">Makassar</option>
           </select>
 
-          <select value={angkatan} onChange={(e) => setAngkatan(e.target.value)} className="flex-1 sm:flex-none py-2 md:py-2.5 px-3 md:px-4 bg-white/80 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 text-slate-800 font-semibold shadow-sm">
+          <select value={angkatan} onChange={(e) => setAngkatan(e.target.value)} className="w-full sm:w-auto py-1.5 md:py-2 px-2.5 md:px-3 bg-white border border-slate-200 rounded-xl text-[11px] md:text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 text-slate-800 font-bold shadow-sm">
             <option value="all">Semua Angkatan</option>
             <option value="2023">Angkatan 2023</option>
             <option value="2024">Angkatan 2024</option>
@@ -93,8 +93,8 @@ export default function EtoserTab() {
         </div>
 
         {data?.stats?.activePeriod && (
-          <div className="w-full sm:w-auto sm:ml-auto bg-teal-50/80 border border-teal-200/80 px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-[11px] md:text-xs font-bold text-teal-800 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse"></span>
+          <div className="w-fit bg-teal-50/80 border border-teal-200/80 px-2.5 py-1 md:px-3 md:py-1.5 rounded-xl text-[10px] md:text-xs font-bold text-teal-800 flex items-center gap-1.5 shrink-0 self-start sm:self-auto">
+            <span className="w-1.5 h-1.5 rounded-full bg-teal-600 animate-pulse"></span>
             Periode: {data.stats.activePeriod.label || data.stats.activePeriod.kode_periode}
           </div>
         )}

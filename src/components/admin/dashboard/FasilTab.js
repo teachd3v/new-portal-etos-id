@@ -57,26 +57,32 @@ export default function FasilTab() {
     <div className="space-y-8 animate-in fade-in duration-500">
       
       {/* Filters */}
-      <div className="bg-white/60 backdrop-blur-md border border-white/80 rounded-2xl p-4 flex flex-wrap gap-4 shadow-sm items-center">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input 
-            type="text" 
-            placeholder="Cari nama Fasilitator..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white/80 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 text-slate-800 font-medium"
-          />
+      <div className="bg-white/70 backdrop-blur-md border border-slate-200/80 rounded-2xl p-2.5 md:p-3.5 shadow-sm">
+        <div className="grid grid-cols-2 gap-2 items-center w-full">
+          <div className="relative w-full">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <input 
+              type="text" 
+              placeholder="Cari Fasilitator..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-2.5 py-1.5 md:py-2 bg-white border border-slate-200 rounded-xl text-[11px] md:text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 text-slate-800 font-medium placeholder:text-[11px] md:placeholder:text-xs"
+            />
+          </div>
+          
+          <select 
+            value={wilayah} 
+            onChange={(e) => setWilayah(e.target.value)} 
+            className="w-full py-1.5 md:py-2 px-2.5 md:px-3 bg-white border border-slate-200 rounded-xl text-[11px] md:text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 text-slate-800 font-bold shadow-sm"
+          >
+            <option value="all">Semua Wilayah</option>
+            <option value="Aceh">Aceh</option>
+            <option value="Padang">Padang</option>
+            <option value="Bogor">Bogor</option>
+            <option value="Jakarta">Jakarta</option>
+            <option value="Makassar">Makassar</option>
+          </select>
         </div>
-        
-        <select value={wilayah} onChange={(e) => setWilayah(e.target.value)} className="py-2.5 px-4 bg-white/80 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 text-slate-800 font-semibold shadow-sm">
-          <option value="all">Semua Wilayah</option>
-          <option value="Aceh">Aceh</option>
-          <option value="Padang">Padang</option>
-          <option value="Bogor">Bogor</option>
-          <option value="Jakarta">Jakarta</option>
-          <option value="Makassar">Makassar</option>
-        </select>
       </div>
 
       {/* Top Stats */}
