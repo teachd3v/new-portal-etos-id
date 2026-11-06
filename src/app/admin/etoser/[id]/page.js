@@ -177,31 +177,32 @@ function AdminEtoserDetailContent({ id }) {
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-5 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 p-4 md:p-8 pb-28 md:pb-32">
+    <div className="max-w-[1400px] mx-auto space-y-3.5 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 px-3.5 py-3 md:px-8 md:py-6 pb-24 md:pb-32">
       
       {/* Header & Mode Switcher */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 md:gap-4">
         <div>
-          <h1 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">
-            {viewMode === 'monitoring' ? 'Rincian Monitoring Bulanan' : 'Rincian RELI'}
-          </h1>
-          <p className="text-slate-500 font-semibold text-xs md:text-sm mt-0.5">
-            {viewMode === 'monitoring' ? (
-              <>Periode Evaluasi: <strong className="text-slate-800">{bulan} {tahun}</strong></>
-            ) : (
-              <>Periode Aktif: <strong className="text-slate-800">{activePeriod?.label || reli?.activeKode}</strong></>
-            )}
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg md:text-2xl font-black text-slate-900 tracking-tight">
+              Rincian Evaluasi Etoser
+            </h1>
+            <span className="text-[10px] md:text-xs font-mono font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+              {user.id}
+            </span>
+          </div>
+          <p className="text-slate-500 font-medium text-[11px] md:text-xs mt-0.5">
+            {viewMode === 'monitoring' ? `Monitoring Bulanan: ${bulan} ${tahun}` : `Asesmen RELI Periode ${activePeriod?.label || reli?.activeKode || 'T0'}`}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center gap-2 self-stretch sm:self-auto">
           {viewMode === 'monitoring' && (
-            <div className="flex items-center gap-2 bg-white/90 border border-slate-200 px-3 py-1.5 rounded-xl shadow-sm">
-              <Calendar className="w-4 h-4 text-teal-600" />
+            <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1.5 rounded-xl shadow-sm">
+              <Calendar className="w-3.5 h-3.5 text-teal-600 shrink-0" />
               <select
                 value={bulan}
                 onChange={(e) => setBulan(e.target.value)}
-                className="bg-transparent text-xs md:text-sm font-bold text-slate-800 focus:outline-none cursor-pointer"
+                className="bg-transparent text-[11px] md:text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
               >
                 {MONTH_OPTIONS.map(m => (
                   <option key={m} value={m}>{m}</option>
@@ -210,7 +211,7 @@ function AdminEtoserDetailContent({ id }) {
               <select
                 value={tahun}
                 onChange={(e) => setTahun(e.target.value)}
-                className="bg-transparent text-xs md:text-sm font-bold text-slate-800 focus:outline-none cursor-pointer border-l border-slate-200 pl-2"
+                className="bg-transparent text-[11px] md:text-xs font-bold text-slate-800 focus:outline-none cursor-pointer border-l border-slate-200 pl-1.5"
               >
                 {YEAR_OPTIONS.map(y => (
                   <option key={y} value={y}>{y}</option>
@@ -219,11 +220,11 @@ function AdminEtoserDetailContent({ id }) {
             </div>
           )}
 
-          <div className="inline-flex bg-white/80 border border-slate-200 p-1 rounded-xl shadow-sm">
+          <div className="inline-flex flex-1 sm:flex-none bg-slate-100/90 border border-slate-200/80 p-1 rounded-xl shadow-inner">
             <button
               type="button"
               onClick={() => setViewMode('monitoring')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-[11px] md:text-xs font-bold transition-all cursor-pointer ${
                 viewMode === 'monitoring'
                   ? 'bg-teal-700 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
@@ -234,7 +235,7 @@ function AdminEtoserDetailContent({ id }) {
             <button
               type="button"
               onClick={() => setViewMode('reli')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-[11px] md:text-xs font-bold transition-all cursor-pointer ${
                 viewMode === 'reli'
                   ? 'bg-teal-700 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
@@ -247,54 +248,55 @@ function AdminEtoserDetailContent({ id }) {
       </div>
 
       {/* Profil Card */}
-      <div className="bg-white/80 backdrop-blur-md rounded-2xl md:rounded-3xl border border-slate-200/80 p-4 md:p-6 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white/80 backdrop-blur-md rounded-2xl md:rounded-3xl border border-slate-200/80 p-3 md:p-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           
           {/* Main User Identity */}
-          <div className="flex items-center gap-3 md:gap-4 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
             {user.avatar ? (
-              <img src={user.avatar} alt={user.name} className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl object-cover shadow-sm shrink-0 border border-teal-100" />
+              <img src={user.avatar} alt={user.name} className="w-11 h-11 md:w-12 md:h-12 rounded-xl object-cover shadow-sm shrink-0 border border-teal-100" />
             ) : (
-              <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-teal-600 text-white flex items-center justify-center font-black text-lg md:text-xl shadow-sm shrink-0">
+              <div className="w-11 h-11 md:w-12 md:h-12 rounded-xl bg-teal-600 text-white flex items-center justify-center font-black text-base md:text-lg shadow-sm shrink-0">
                 {user.name?.charAt(0).toUpperCase()}
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base md:text-lg font-bold text-slate-900 truncate" title={user.name}>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h2 className="text-sm md:text-base font-black text-slate-900 truncate" title={user.name}>
                   {user.name}
                 </h2>
-                <span className="text-[10px] md:text-xs text-slate-500 font-bold uppercase bg-slate-100 px-2 py-0.5 rounded">
+                <span className="text-[9px] md:text-[10px] text-teal-800 bg-teal-50 border border-teal-200/70 font-bold uppercase px-1.5 py-0.5 rounded">
                   {user.role}
                 </span>
               </div>
-              <p className="text-xs text-teal-700 font-semibold font-mono">{user.id}</p>
-              <p className="text-xs text-slate-500 truncate mt-0.5">
-                {user.wilayah} • Angkatan {user.angkatan} {user.fase ? `• Fase ${user.fase}` : ''}
+              <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                {user.wilayah} &bull; Angkatan {user.angkatan} {user.fase ? `&bull; Fase ${user.fase}` : ''}
               </p>
             </div>
           </div>
 
           {/* Quick Stats / Meta info */}
-          <div className="grid grid-cols-2 md:flex items-center gap-2 md:gap-4 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
-            <div className="bg-slate-50/80 border border-slate-100 rounded-xl px-3 py-2 text-left md:text-right">
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Kampus & Jurusan</p>
-              <p className="text-xs font-bold text-slate-800 truncate max-w-[140px] md:max-w-[180px]" title={user.universitas}>
+          <div className="grid grid-cols-2 sm:flex items-center gap-2 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+            <div className="bg-slate-50 border border-slate-100 rounded-xl px-2.5 py-1.5 text-left sm:text-right">
+              <p className="text-[9px] font-bold text-slate-400 uppercase">Kampus & Jurusan</p>
+              <p className="text-xs font-bold text-slate-800 truncate max-w-[140px] sm:max-w-[170px]" title={user.universitas || '-'}>
                 {user.universitas || '-'}
               </p>
-              <p className="text-[11px] text-slate-500 truncate max-w-[140px] md:max-w-[180px]">
-                {user.jurusan ? `${user.jurusan}${user.semester ? ` • Smt ${user.semester}` : ''}` : '-'}
+              <p className="text-[10px] text-slate-500 truncate max-w-[140px] sm:max-w-[170px]">
+                {user.jurusan && user.jurusan !== '-'
+                  ? `${user.jurusan}${user.semester && user.semester !== '-' ? ` • Smt ${user.semester}` : ''}`
+                  : 'Belum diisi'}
               </p>
             </div>
 
-            <div className="bg-teal-50/80 border border-teal-100 rounded-xl px-3 py-2 flex items-center justify-between md:justify-end gap-3">
+            <div className="bg-teal-50/80 border border-teal-100 rounded-xl px-2.5 py-1.5 flex items-center justify-between sm:justify-end gap-2.5">
               <div>
-                <p className="text-[10px] font-bold text-teal-700 uppercase">IPK</p>
-                <p className="text-base md:text-lg font-black text-teal-950 leading-none mt-0.5">
-                  {user.ipk_terakhir?.toFixed(2) || '0.00'}
+                <p className="text-[9px] font-bold text-teal-700 uppercase">IPK</p>
+                <p className="text-sm md:text-base font-black text-teal-950 leading-none mt-0.5">
+                  {user.ipk_terakhir ? Number(user.ipk_terakhir).toFixed(2) : '0.00'}
                 </p>
               </div>
-              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200 self-center">
+              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-md border border-emerald-200">
                 Aktif
               </span>
             </div>
@@ -310,45 +312,48 @@ function AdminEtoserDetailContent({ id }) {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
             
             {/* 1. Monitoring Metric Card */}
-            <div className="bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 text-white rounded-2xl md:rounded-[2.5rem] p-5 md:p-8 shadow-xl relative overflow-hidden flex flex-col justify-between">
-              <div className="absolute -top-10 -right-10 w-48 h-48 bg-teal-500/20 rounded-full blur-3xl"></div>
+            <div className="bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 text-white rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl relative overflow-hidden flex flex-col justify-between">
+              <div className="absolute -top-10 -right-10 w-48 h-48 bg-teal-500/20 rounded-full blur-3xl pointer-events-none"></div>
               
               <div>
-                <div className="flex justify-between items-start mb-4 md:mb-6">
-                  <span className="text-xs font-bold tracking-widest uppercase text-teal-300 bg-teal-900/50 border border-teal-500/30 px-3 py-1 rounded-full">
-                    Monitoring ({bulan} {tahun})
+                <div className="flex justify-between items-center mb-3 md:mb-4">
+                  <span className="text-[10px] md:text-xs font-bold tracking-wider uppercase text-teal-300 bg-teal-900/60 border border-teal-500/30 px-2.5 py-0.5 rounded-full">
+                    Monitoring Bulanan
                   </span>
                   {monevCurrent?.hasSubmitted ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-0.5 rounded-full">
+                    <span className="inline-flex items-center gap-1 text-[10px] md:text-[11px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 rounded-full">
                       <CheckCircle2 className="w-3 h-3" /> Selesai
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 bg-amber-500/20 border border-amber-400/30 px-2.5 py-0.5 rounded-full">
+                    <span className="inline-flex items-center gap-1 text-[10px] md:text-[11px] font-bold text-amber-300 bg-amber-500/20 border border-amber-400/30 px-2 py-0.5 rounded-full">
                       <Clock className="w-3 h-3" /> Belum Mengisi
                     </span>
                   )}
                 </div>
 
-                <p className="text-slate-400 text-xs md:text-sm font-semibold mb-1">Rata-rata Skor Monitoring Bulanan</p>
-                <div className="flex items-baseline gap-3 mb-3 md:mb-4">
-                  <span className="text-4xl md:text-6xl font-black tracking-tight text-white">
+                <p className="text-slate-400 text-[11px] md:text-xs font-medium mb-0.5">Rata-rata Skor Monitoring</p>
+                <div className="flex items-baseline gap-2 mb-2.5">
+                  <span className="text-3xl md:text-5xl font-black tracking-tight text-white">
                     {monevCurrent?.final_score !== null && monevCurrent?.final_score !== undefined
                       ? monevCurrent.final_score.toFixed(2)
                       : '-'}
                   </span>
-                  <span className="text-teal-400 font-bold text-sm">/ 4.00</span>
+                  <span className="text-teal-400 font-bold text-xs md:text-sm">/ 4.00</span>
                 </div>
 
-                <div className="space-y-2.5 md:space-y-3">
-                  <div className="inline-block bg-teal-500/20 border border-teal-400/30 px-3.5 py-1 rounded-full text-teal-300 font-bold text-xs md:text-sm">
-                    👑 {monevCurrent?.maturity_level || 'Belum Mengisi'}
-                  </div>
+                <div className="space-y-2">
+                  {/* Only show maturity level badge when report is submitted and available (No redundant Belum Mengisi!) */}
+                  {monevCurrent?.hasSubmitted && monevCurrent?.maturity_level && (
+                    <div className="inline-block bg-teal-500/20 border border-teal-400/30 px-2.5 py-0.5 rounded-full text-teal-300 font-bold text-[11px] md:text-xs">
+                      👑 {monevCurrent.maturity_level}
+                    </div>
+                  )}
 
-                  <div className="grid grid-cols-2 gap-2.5 pt-3 border-t border-white/10 text-xs">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2 pt-2 border-t border-white/10 text-xs">
                     {monevVars.map((vName) => (
-                      <div key={vName} className="bg-white/5 border border-white/10 rounded-xl px-3 py-2">
-                        <p className="text-slate-400 text-[10px] truncate">{vName}</p>
-                        <p className="font-bold text-white text-sm">
+                      <div key={vName} className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-1.5">
+                        <p className="text-slate-400 text-[9px] md:text-[10px] truncate">{vName}</p>
+                        <p className="font-black text-white text-xs md:text-sm mt-0.5">
                           {monevCurrent?.hasSubmitted && monevCurrent?.dimensions?.[vName]
                             ? monevCurrent.dimensions[vName].self.toFixed(2)
                             : '-'}
@@ -360,12 +365,12 @@ function AdminEtoserDetailContent({ id }) {
               </div>
 
               {monevCurrent?.growth_delta !== null && monevCurrent?.growth_delta !== undefined && (
-                <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-white/10 flex justify-between items-center text-xs md:text-sm">
-                  <span className="text-slate-400">Perubahan vs Bulan Sebelumnya:</span>
+                <div className="mt-3 pt-2.5 border-t border-white/10 flex justify-between items-center text-[11px] md:text-xs">
+                  <span className="text-slate-400">Vs Bulan Sebelumnya:</span>
                   <span className={`font-black flex items-center gap-1 ${
                     monevCurrent.growth_delta >= 0 ? 'text-emerald-400' : 'text-rose-400'
                   }`}>
-                    <TrendingUp className="w-4 h-4" />
+                    <TrendingUp className="w-3.5 h-3.5" />
                     {monevCurrent.growth_delta > 0 ? `+${monevCurrent.growth_delta}` : monevCurrent.growth_delta}
                   </span>
                 </div>
@@ -553,49 +558,51 @@ function AdminEtoserDetailContent({ id }) {
         /* ==================== RELI ETOSER VIEW ==================== */
         <>
           {/* RELI Summary & Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-5">
             
             {/* 1. RELI Metric Card */}
-            <div className="bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 text-white rounded-2xl md:rounded-[2.5rem] p-5 md:p-8 shadow-xl relative overflow-hidden flex flex-col justify-between">
-              <div className="absolute -top-10 -right-10 w-48 h-48 bg-teal-500/20 rounded-full blur-3xl"></div>
+            <div className="bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 text-white rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-xl relative overflow-hidden flex flex-col justify-between">
+              <div className="absolute -top-10 -right-10 w-48 h-48 bg-teal-500/20 rounded-full blur-3xl pointer-events-none"></div>
               
               <div>
-                <div className="flex justify-between items-start mb-4 md:mb-6">
-                  <span className="text-xs font-bold tracking-widest uppercase text-teal-300 bg-teal-900/50 border border-teal-500/30 px-3 py-1 rounded-full">
-                    RELI Index ({reli?.activeKode})
+                <div className="flex justify-between items-center mb-3 md:mb-4">
+                  <span className="text-[10px] md:text-xs font-bold tracking-wider uppercase text-teal-300 bg-teal-900/60 border border-teal-500/30 px-2.5 py-0.5 rounded-full">
+                    RELI Index ({reli?.activeKode || 'T0'})
                   </span>
-                  <span className="text-xs text-slate-400 font-medium">Bobot 50:50</span>
+                  <span className="text-[10px] md:text-xs text-slate-400 font-medium">Bobot 50:50</span>
                 </div>
 
-                <p className="text-slate-400 text-xs md:text-sm font-semibold mb-1">Skor Kematangan Kepemimpinan</p>
-                <div className="flex items-baseline gap-3 mb-3 md:mb-4">
-                  <span className="text-4xl md:text-6xl font-black tracking-tight text-white">
+                <p className="text-slate-400 text-[11px] md:text-xs font-medium mb-0.5">Skor Kematangan Kepemimpinan</p>
+                <div className="flex items-baseline gap-2 mb-2.5">
+                  <span className="text-3xl md:text-5xl font-black tracking-tight text-white">
                     {current?.final_reli !== undefined && current?.final_reli !== null ? current.final_reli.toFixed(2) : '-'}
                   </span>
-                  <span className="text-teal-400 font-bold text-sm">/ 4.00</span>
+                  <span className="text-teal-400 font-bold text-xs md:text-sm">/ 4.00</span>
                 </div>
 
-                {current && (
-                  <div className="space-y-2.5 md:space-y-3">
-                    <div className="inline-block bg-teal-500/20 border border-teal-400/30 px-3.5 py-1 rounded-full text-teal-300 font-bold text-xs md:text-sm">
-                      👑 {current.maturity_level}
+                {current ? (
+                  <div className="space-y-2">
+                    {current.maturity_level && (
+                      <div className="inline-block bg-teal-500/20 border border-teal-400/30 px-2.5 py-0.5 rounded-full text-teal-300 font-bold text-[11px] md:text-xs">
+                        👑 {current.maturity_level}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/10 text-xs">
+                      <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-1.5">
+                        <p className="text-slate-400 text-[9px] md:text-[10px]">Self Score</p>
+                        <p className="font-black text-white text-xs md:text-sm mt-0.5">{current.self_score?.toFixed(2) || '-'}</p>
+                      </div>
+                      <div className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-1.5">
+                        <p className="text-slate-400 text-[9px] md:text-[10px]">Facil Score</p>
+                        <p className="font-black text-white text-xs md:text-sm mt-0.5">{current.facil_score?.toFixed(2) || '-'}</p>
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/10 text-xs">
-                      <div>
-                        <p className="text-slate-400">Self Score</p>
-                        <p className="font-bold text-white text-base">{current.self_score?.toFixed(2) || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-400">Facil Score</p>
-                        <p className="font-bold text-white text-base">{current.facil_score?.toFixed(2) || '-'}</p>
-                      </div>
-                    </div>
-
-                    {current.gap_score !== null && (
-                      <div className="bg-white/5 border border-white/10 p-2.5 md:p-3 rounded-xl md:rounded-2xl flex justify-between items-center text-xs">
-                        <span className="text-slate-300">Self-Facil Gap: <strong>{current.gap_score > 0 ? `+${current.gap_score}` : current.gap_score}</strong></span>
-                        <span className={`px-2 py-0.5 rounded-md font-bold ${
+                    {current.gap_score !== null && current.gap_score !== undefined && (
+                      <div className="bg-white/5 border border-white/10 px-2.5 py-1.5 rounded-xl flex justify-between items-center text-[11px]">
+                        <span className="text-slate-300">Gap Self-Fasil: <strong>{current.gap_score > 0 ? `+${current.gap_score}` : current.gap_score}</strong></span>
+                        <span className={`px-1.5 py-0.5 rounded font-bold text-[10px] ${
                           current.gap_category === 'Selaras' ? 'bg-emerald-500/20 text-emerald-300' :
                           current.gap_category === 'Perlu refleksi' ? 'bg-sky-500/20 text-sky-300' :
                           'bg-amber-500/20 text-amber-300'
@@ -605,27 +612,31 @@ function AdminEtoserDetailContent({ id }) {
                       </div>
                     )}
                   </div>
+                ) : (
+                  <div className="pt-2 border-t border-white/10 text-[11px] text-slate-400">
+                    Belum ada pengisian asesmen RELI untuk periode ini.
+                  </div>
                 )}
               </div>
 
               {current?.growth_delta !== null && current?.growth_delta !== undefined && (
-                <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-white/10 flex justify-between items-center text-xs md:text-sm">
+                <div className="mt-3 pt-2.5 border-t border-white/10 flex justify-between items-center text-[11px] md:text-xs">
                   <span className="text-slate-400">Pertumbuhan vs T0:</span>
                   <span className="font-black text-emerald-400 flex items-center gap-1">
-                    <TrendingUp className="w-4 h-4" /> +{current.growth_delta} ({current.growth_rate > 0 ? `+${current.growth_rate}%` : `${current.growth_rate}%`})
+                    <TrendingUp className="w-3.5 h-3.5" /> +{current.growth_delta} ({current.growth_rate > 0 ? `+${current.growth_rate}%` : `${current.growth_rate}%`})
                   </span>
                 </div>
               )}
             </div>
 
             {/* 2. Radar Chart */}
-            <div className="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl md:rounded-[2.5rem] p-4 md:p-6 shadow-sm flex flex-col justify-between">
+            <div className="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl md:rounded-3xl p-3.5 md:p-5 shadow-sm flex flex-col justify-between">
               <div className="flex justify-between items-center mb-2">
-                <h3 className="font-black text-slate-900 text-sm md:text-base">Profil Radar 4 Dimensi</h3>
-                <span className="text-xs text-slate-500 font-semibold">Self vs Fasil</span>
+                <h3 className="font-black text-slate-900 text-xs sm:text-sm md:text-base">Profil Radar 4 Dimensi</h3>
+                <span className="text-[10px] md:text-xs text-slate-500 font-semibold">Self vs Fasil</span>
               </div>
 
-              <div className="h-64 w-full flex items-center justify-center">
+              <div className="h-56 md:h-64 w-full flex items-center justify-center">
                 {radarChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarChartData}>
@@ -638,7 +649,9 @@ function AdminEtoserDetailContent({ id }) {
                     </RadarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-slate-400 text-sm font-medium">Belum ada data evaluasi RELI</p>
+                  <div className="text-center p-6 text-slate-400 text-xs font-medium">
+                    Belum ada data evaluasi RELI
+                  </div>
                 )}
               </div>
 
@@ -659,13 +672,13 @@ function AdminEtoserDetailContent({ id }) {
             </div>
 
             {/* 3. Trajectory Chart */}
-            <div className="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl md:rounded-[2.5rem] p-4 md:p-6 shadow-sm flex flex-col justify-between">
+            <div className="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl md:rounded-3xl p-3.5 md:p-5 shadow-sm flex flex-col justify-between">
               <div className="flex justify-between items-center mb-2">
-                <h3 className="font-black text-slate-900 text-sm md:text-base">Longitudinal Trajectory</h3>
-                <span className="text-xs text-teal-700 font-bold bg-teal-50 px-2 py-0.5 rounded-full">T0 – T4 Growth</span>
+                <h3 className="font-black text-slate-900 text-xs sm:text-sm md:text-base">Longitudinal Trajectory</h3>
+                <span className="text-[10px] md:text-xs text-teal-700 font-bold bg-teal-50 px-2 py-0.5 rounded-full">T0 – T4 Growth</span>
               </div>
 
-              <div className="h-64 w-full flex items-center justify-center">
+              <div className="h-56 md:h-64 w-full flex items-center justify-center">
                 {trajectoryChartData.some(t => t.score !== null) ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={trajectoryChartData} margin={{ top: 10, right: 20, left: -20, bottom: 0 }}>
