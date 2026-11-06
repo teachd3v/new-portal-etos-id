@@ -179,7 +179,7 @@ function AdminEtoserDetailContent({ id }) {
   return (
     <div className="max-w-[1400px] mx-auto space-y-3.5 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 px-3.5 py-3 md:px-8 md:py-6 pb-24 md:pb-32">
       
-      {/* Header & Mode Switcher */}
+      {/* Header & Sub-title */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 md:gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -195,56 +195,29 @@ function AdminEtoserDetailContent({ id }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-stretch sm:self-auto">
-          {viewMode === 'monitoring' && (
-            <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1.5 rounded-xl shadow-sm">
-              <Calendar className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-              <select
-                value={bulan}
-                onChange={(e) => setBulan(e.target.value)}
-                className="bg-transparent text-[11px] md:text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
-              >
-                {MONTH_OPTIONS.map(m => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
-              <select
-                value={tahun}
-                onChange={(e) => setTahun(e.target.value)}
-                className="bg-transparent text-[11px] md:text-xs font-bold text-slate-800 focus:outline-none cursor-pointer border-l border-slate-200 pl-1.5"
-              >
-                {YEAR_OPTIONS.map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="inline-flex flex-1 sm:flex-none bg-slate-100/90 border border-slate-200/80 p-1 rounded-xl shadow-inner">
-            <button
-              type="button"
-              onClick={() => setViewMode('monitoring')}
-              className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-[11px] md:text-xs font-bold transition-all cursor-pointer ${
-                viewMode === 'monitoring'
-                  ? 'bg-teal-700 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+        {viewMode === 'monitoring' && (
+          <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1.5 rounded-xl shadow-sm self-start sm:self-auto">
+            <Calendar className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+            <select
+              value={bulan}
+              onChange={(e) => setBulan(e.target.value)}
+              className="bg-transparent text-[11px] md:text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
             >
-              Monitoring Bulanan
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('reli')}
-              className={`flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-[11px] md:text-xs font-bold transition-all cursor-pointer ${
-                viewMode === 'reli'
-                  ? 'bg-teal-700 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              {MONTH_OPTIONS.map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            <select
+              value={tahun}
+              onChange={(e) => setTahun(e.target.value)}
+              className="bg-transparent text-[11px] md:text-xs font-bold text-slate-800 focus:outline-none cursor-pointer border-l border-slate-200 pl-1.5"
             >
-              Asesmen RELI
-            </button>
+              {YEAR_OPTIONS.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Profil Card */}

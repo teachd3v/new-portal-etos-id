@@ -60,16 +60,35 @@ function HeaderContent({ handleLogout }) {
 
   return (
     <header className="pt-[env(safe-area-inset-top,0px)] min-h-[calc(4rem+env(safe-area-inset-top,0px))] md:min-h-[6rem] px-4 md:px-8 flex items-center justify-between shrink-0 bg-white/40 md:bg-white/20 backdrop-blur-md border-b border-white/30 sticky top-0 z-30 transition-all select-none">
-      {/* Back Button for Detail Pages */}
+      {/* Back Button & Detail Dropdown */}
       {isDetailPage ? (
-        <div>
+        <div className="flex items-center gap-2 md:gap-3">
           <button
             onClick={() => router.back()}
-            className="inline-flex items-center gap-1.5 px-3 md:px-4 py-1.5 bg-white/80 hover:bg-white border border-teal-200/90 rounded-full shadow-sm text-teal-950 font-bold text-xs md:text-sm transition-all active:scale-95 cursor-pointer hover:border-teal-400"
+            className="w-8 h-8 md:w-9 md:h-9 bg-white/90 hover:bg-white border border-teal-200/90 rounded-full shadow-sm flex items-center justify-center text-teal-700 hover:text-teal-950 transition-all active:scale-95 cursor-pointer hover:border-teal-400 shrink-0"
+            title="Kembali"
           >
-            <ArrowLeft className="w-3.5 h-3.5 md:w-4 md:h-4 text-teal-700" />
-            <span>Kembali</span>
+            <ArrowLeft className="w-4 h-4 md:w-4.5 md:h-4.5" />
           </button>
+
+          {pathname.startsWith('/admin/etoser/') && (
+            <div className="relative">
+              <select
+                value={searchParams.get('mode') === 'monitoring' ? 'monitoring' : 'reli'}
+                onChange={(e) => {
+                  const newMode = e.target.value;
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.set('mode', newMode);
+                  router.push(`${pathname}?${params.toString()}`);
+                }}
+                className="header-pill-select bg-white/90 backdrop-blur-md border border-teal-200/90 text-teal-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500/30 cursor-pointer max-w-[175px] sm:max-w-[210px] truncate"
+              >
+                <option value="monitoring">Monitoring Bulanan</option>
+                <option value="reli">Asesmen RELI</option>
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-teal-600 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+          )}
         </div>
       ) : (
         <>
