@@ -251,13 +251,13 @@ export default function EtoserPresensiPage() {
       {/* Header Section */}
       <div className="bg-gradient-to-br from-sky-600 via-indigo-600 to-slate-900 rounded-2xl md:rounded-[2.5rem] p-4 md:p-10 text-white shadow-xl relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
-          <div>
+          <div className="min-w-0 w-full">
             <span className="text-[10px] md:text-xs font-black tracking-widest uppercase text-sky-200 bg-sky-950/60 border border-sky-400/30 px-2.5 md:px-3 py-0.5 md:py-1 rounded-full">
               Etoser
             </span>
-            <h1 className="text-2xl md:text-4xl font-black mb-1 md:mb-2 mt-2 drop-shadow-sm flex items-center gap-2.5 md:gap-3">
-              <Calendar className="w-7 h-7 md:w-10 md:h-10 text-sky-200" />
-              Presensi, Pre-Test & Post-Test
+            <h1 className="text-[14.5px] sm:text-lg md:text-3xl font-black tracking-tight mb-0.5 md:mb-2 mt-2 drop-shadow-sm flex items-center gap-2 md:gap-3 whitespace-nowrap">
+              <Calendar className="w-4 h-4 sm:w-5 sm:h-5 md:w-8 md:h-8 text-sky-200 shrink-0" />
+              <span>Presensi, Pre-Test & Post-Test</span>
             </h1>
             <p className="text-sky-100/90 font-medium text-xs md:text-lg max-w-xl hidden md:block">
               Kerjakan Pre-Test sebelum kegiatan, klik &quot;Hadir&quot; saat kegiatan berlangsung, dan selesaikan Post-Test setelahnya.

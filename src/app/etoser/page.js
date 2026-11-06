@@ -2,9 +2,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Compass,
-  Calendar,
-  Trophy,
-  ArrowRight,
   Loader2,
   TrendingUp,
   TrendingDown,
@@ -594,51 +591,6 @@ export default function EtoserDashboard() {
               </div>
             </div>
           )}
-
-          {/* Quick Menu Cards (Presensi & Portofolio) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            <div
-              onClick={() => router.push('/etoser/presensi')}
-              className="bg-white/75 backdrop-blur-md border border-slate-200/80 rounded-2xl md:rounded-[2rem] p-4 md:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-[0.99] flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex justify-between items-start mb-3">
-                  <div className="bg-sky-100 p-2.5 md:p-3 rounded-xl md:rounded-2xl text-sky-600 group-hover:bg-sky-600 group-hover:text-white transition-colors">
-                    <Calendar className="w-5 h-5 md:w-6 md:h-6" />
-                  </div>
-                  <ArrowRight className="w-4 h-4 md:w-5 md:h-5 text-slate-300 group-hover:text-sky-600 transition-colors" />
-                </div>
-                <h4 className="text-base md:text-xl font-bold text-slate-900 mb-1">
-                  Presensi & Penugasan Agenda
-                </h4>
-                <p className="text-slate-600 font-medium text-xs md:text-sm">
-                  {dashboardData?.agendaCount > 0
-                    ? `Terdapat ${dashboardData.agendaCount} agenda aktif untuk diikuti.`
-                    : 'Belum ada agenda pembinaan aktif saat ini.'}
-                </p>
-              </div>
-            </div>
-
-            <div
-              onClick={() => router.push('/etoser/profil?tab=portofolio')}
-              className="bg-white/75 backdrop-blur-md border border-slate-200/80 rounded-2xl md:rounded-[2rem] p-4 md:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-[0.99] flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex justify-between items-start mb-3">
-                  <div className="bg-indigo-100 p-2.5 md:p-3 rounded-xl md:rounded-2xl text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                    <Trophy className="w-5 h-5 md:w-6 md:h-6" />
-                  </div>
-                  <ArrowRight className="w-4 h-4 md:w-5 md:h-5 text-slate-300 group-hover:text-indigo-600 transition-colors" />
-                </div>
-                <h4 className="text-base md:text-xl font-bold text-slate-900 mb-1">
-                  Portofolio & Export CV
-                </h4>
-                <p className="text-slate-600 font-medium text-xs md:text-sm">
-                  Rekam karya, prestasi akademik (IPK {dashboardData?.ipk || '-'}), dan unduh Curriculum Vitae lengkap.
-                </p>
-              </div>
-            </div>
-          </div>
         </>
       )}
     </div>
