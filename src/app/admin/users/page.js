@@ -418,20 +418,8 @@ function AdminUsersContent() {
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
       
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 pt-2 md:pt-4">
-        <div>
-          <h1 className="text-2xl md:text-4xl font-black text-teal-950 tracking-tight mb-1 md:mb-2 drop-shadow-sm flex items-center">
-            Manajemen Pengguna 
-            <span className="inline-flex items-center justify-center h-6 md:h-8 px-2.5 rounded-full bg-teal-600/10 text-teal-700 text-xs md:text-sm font-bold ml-2.5 border border-teal-600/20">
-              {users.length}
-            </span>
-          </h1>
-          <p className="hidden md:block text-teal-800/70 font-medium text-base md:text-lg max-w-xl">
-            Kelola akun seluruh pengguna portal (Etoser, Fasilitator, dan Administrator) di seluruh wilayah binaan.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+      <div className="flex items-center justify-between gap-3 pt-2 md:pt-4 flex-wrap">
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap ml-auto w-full sm:w-auto justify-end">
           {selectedIds.length > 0 && (
             <button 
               onClick={handleBulkDelete}
@@ -448,13 +436,18 @@ function AdminUsersContent() {
             <span className="hidden sm:inline">Bulk Import</span>
             <span className="sm:hidden">Import</span>
           </button>
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="bg-teal-800 hover:bg-teal-900 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-xl md:rounded-2xl shadow-lg transition-all flex items-center gap-1.5 shrink-0 text-xs md:text-sm cursor-pointer"
-          >
-            <UserPlus className="w-4 h-4 md:w-5 md:h-5" />
-            <span>Tambah User</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="inline-flex items-center justify-center h-8 md:h-10 px-3 rounded-xl md:rounded-2xl bg-teal-600/10 text-teal-800 text-xs md:text-sm font-black border border-teal-600/20 shadow-sm" title="Total Pengguna">
+              {users.length} User
+            </span>
+            <button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="bg-teal-800 hover:bg-teal-900 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-xl md:rounded-2xl shadow-lg transition-all flex items-center gap-1.5 text-xs md:text-sm cursor-pointer"
+            >
+              <UserPlus className="w-4 h-4 md:w-5 md:h-5" />
+              <span>Tambah User</span>
+            </button>
+          </div>
         </div>
       </div>
 

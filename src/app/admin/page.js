@@ -33,12 +33,12 @@ function DashboardContent() {
       <div className="bg-gradient-to-br from-teal-800 via-teal-700 to-slate-900 rounded-2xl md:rounded-[2.5rem] p-3.5 md:p-10 text-white shadow-xl relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
           <div>
-            <span className="text-[10px] md:text-xs font-black tracking-widest uppercase text-teal-200 bg-teal-950/60 border border-teal-400/30 px-2.5 py-0.5 md:px-3 md:py-1 rounded-full inline-block mb-1 md:mb-3">
-              Admin Pusat
-            </span>
-            <h1 className="text-xl md:text-4xl font-black drop-shadow-sm flex items-center gap-2 md:gap-3">
+            <h1 className="text-xl md:text-4xl font-black drop-shadow-sm flex items-center gap-2 md:gap-3 flex-wrap">
               <span className="md:hidden">Dashboard</span>
               <span className="hidden md:inline">Dashboard Monitoring & Analitik</span>
+              <span className="text-[10px] md:text-xs font-black tracking-widest uppercase text-teal-200 bg-teal-950/60 border border-teal-400/30 px-2.5 py-0.5 md:px-3 md:py-1 rounded-full shrink-0">
+                Admin Pusat
+              </span>
             </h1>
             <p className="hidden md:block text-teal-100/90 font-medium text-base md:text-lg max-w-2xl mt-2">
               Pusat kendali pantauan performa Etoser dan Fasilitator secara komprehensif di seluruh wilayah binaan.

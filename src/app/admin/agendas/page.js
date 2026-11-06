@@ -670,25 +670,22 @@ function AdminAgendasContent() {
     <div className="max-w-6xl mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
       
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 pt-2 md:pt-4">
-        <div>
-          <h1 className="text-2xl md:text-4xl font-black text-teal-950 tracking-tight mb-1 md:mb-2 drop-shadow-sm flex items-center gap-2.5">
-            Manajemen Agenda
-            <span className="inline-flex items-center justify-center h-6 md:h-8 px-2.5 rounded-full bg-teal-600/10 text-teal-700 text-xs md:text-sm font-bold border border-teal-600/20">
-              {agendas.length}
+      <div className="pt-2 md:pt-4">
+        <div className="grid grid-cols-2 gap-3 max-w-md ml-auto">
+          <div className="bg-white/70 backdrop-blur-md border border-teal-200/80 rounded-xl md:rounded-2xl py-2 md:py-3 px-3 md:px-5 flex items-center justify-center gap-2 shadow-sm">
+            <Calendar className="w-4 h-4 md:w-5 md:h-5 text-teal-700 shrink-0" />
+            <span className="text-xs md:text-sm font-black text-teal-950 truncate">
+              {agendas.length} Agenda
             </span>
-          </h1>
-          <p className="hidden md:block text-teal-800/70 font-medium text-base md:text-lg max-w-xl">
-            Kelola seluruh agenda Nasional maupun Wilayah beserta soal Pre-Test & Post-Test.
-          </p>
+          </div>
+          <button 
+            onClick={openAddModal}
+            className="bg-teal-800 hover:bg-teal-900 text-white font-bold py-2 md:py-3 px-3 md:px-5 rounded-xl md:rounded-2xl shadow-lg transition-all flex items-center justify-center gap-1.5 text-xs md:text-sm cursor-pointer w-full"
+          >
+            <Plus className="w-4 h-4 md:w-5 md:h-5 shrink-0" />
+            <span className="truncate">Tambah Agenda</span>
+          </button>
         </div>
-        <button 
-          onClick={openAddModal}
-          className="bg-teal-800 hover:bg-teal-900 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-xl md:rounded-2xl shadow-lg transition-all flex items-center justify-center gap-1.5 shrink-0 text-xs md:text-sm cursor-pointer"
-        >
-          <Plus className="w-4 h-4 md:w-5 md:h-5" />
-          <span>Tambah Agenda</span>
-        </button>
       </div>
 
       {/* Main Container Card */}

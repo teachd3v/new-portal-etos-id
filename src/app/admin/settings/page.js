@@ -31,16 +31,8 @@ function SettingsContent() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-4 md:space-y-6 animate-in fade-in duration-700">
-      {/* Header Section */}
-      <div className="pt-2 md:pt-4 pb-2 md:pb-4 border-b border-teal-900/10">
-        <h1 className="text-2xl md:text-4xl font-black text-teal-950 tracking-tight">Pengaturan & Monev</h1>
-        <p className="hidden md:block text-teal-800/70 font-medium text-base md:text-lg mt-1">
-          Kelola instrumen penilaian, periode asesmen, dan sanksi pembinaan.
-        </p>
-      </div>
-
       {/* Tab Content Area */}
-      <div className="pt-2">
+      <div className="pt-2 md:pt-4">
         <ActiveComponent />
       </div>
     </div>
