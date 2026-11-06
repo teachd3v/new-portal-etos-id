@@ -226,7 +226,7 @@ function FasilSubmissionDetailModal({ submission, onClose }) {
   if (!submission) return null;
   return typeof document !== 'undefined' && createPortal(
     <div onClick={onClose} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
-      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl md:rounded-[2rem] p-6 md:p-8 w-full max-w-lg shadow-2xl space-y-5 animate-in zoom-in-95 duration-200 cursor-default">
+      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl md:rounded-[2rem] p-6 md:p-8 w-full max-w-lg max-h-[92dvh] overflow-y-auto shadow-2xl space-y-5 animate-in zoom-in-95 duration-200 cursor-default">
         <div className="flex items-center justify-between pb-3 border-b border-orange-100">
           <div>
             <span className="text-[10px] font-black uppercase tracking-wider text-orange-800 bg-orange-100 px-2.5 py-0.5 rounded-md">

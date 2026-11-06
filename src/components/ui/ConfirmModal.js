@@ -15,7 +15,7 @@ export default function ConfirmModal({ isOpen, onClose, onConfirm, title = "Konf
 
   return (
     <div onClick={onClose} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-teal-950/30 backdrop-blur-md animate-in fade-in duration-200 cursor-pointer">
-      <div onClick={(e) => e.stopPropagation()} className="bg-white/80 backdrop-blur-2xl border border-white/60 rounded-[2rem] p-8 w-full max-w-sm shadow-2xl text-center animate-in zoom-in-95 duration-300 cursor-default">
+      <div onClick={(e) => e.stopPropagation()} className="bg-white/80 backdrop-blur-2xl border border-white/60 rounded-[2rem] p-6 sm:p-8 w-full max-w-sm max-h-[92dvh] overflow-y-auto shadow-2xl text-center animate-in zoom-in-95 duration-300 cursor-default">
         <div className={"w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner " + (isDestructive ? 'bg-rose-100' : 'bg-amber-100')}>
           <AlertTriangle className={"w-8 h-8 " + (isDestructive ? 'text-rose-600' : 'text-amber-600')} />
         </div>
