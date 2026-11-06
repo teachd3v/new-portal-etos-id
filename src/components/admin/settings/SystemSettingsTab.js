@@ -14,6 +14,7 @@ export default function SystemSettingsTab() {
   });
   
   const [periodes, setPeriodes] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [loadingPeriodes, setLoadingPeriodes] = useState(true);
   const [saving, setSaving] = useState(false);
 
