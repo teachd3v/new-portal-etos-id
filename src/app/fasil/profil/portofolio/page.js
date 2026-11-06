@@ -308,14 +308,8 @@ export default function FasilPortofolioPage() {
             Belum Ada Portofolio Profesional
           </h3>
           <p className="text-slate-500 text-xs md:text-sm mt-1 max-w-md mx-auto">
-            Tambahkan sertifikasi, pengalaman mentoring, atau karya profesional Anda untuk melengkapi profil mitra.
+            Gunakan tombol Tambah Baru di atas untuk menambahkan sertifikasi, pengalaman mentoring, atau karya profesional Anda.
           </p>
-          <button
-            onClick={() => setShowForm(true)}
-            className="mt-4 bg-orange-100 text-orange-800 px-5 py-2 rounded-xl font-bold inline-flex items-center gap-1.5 hover:bg-orange-200 transition-colors text-xs md:text-sm cursor-pointer"
-          >
-            <Plus className="w-4 h-4" /> Tambah Portofolio Pertama
-          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
