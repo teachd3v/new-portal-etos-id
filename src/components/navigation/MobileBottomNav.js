@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, Users, FolderKanban, Settings, 
-  ClipboardCheck, UserCircle, Calendar, Trophy 
+  ClipboardCheck, UserCircle, Calendar, Compass 
 } from 'lucide-react';
 
 const ROLE_NAV_ITEMS = {
@@ -22,7 +22,8 @@ const ROLE_NAV_ITEMS = {
   etoser: [
     { label: 'Beranda', href: '/etoser', icon: LayoutDashboard, exact: true },
     { label: 'Presensi', href: '/etoser/presensi', icon: Calendar },
-    { label: 'Monitoring', href: '/etoser/monev-bulanan', icon: Trophy },
+    { label: 'Monitoring', href: '/etoser/monev-bulanan', icon: ClipboardCheck },
+    { label: 'Asesmen RELI', href: '/etoser/penilaian-mandiri', icon: Compass },
     { label: 'Profil', href: '/etoser/profil', icon: UserCircle },
   ]
 };
@@ -49,10 +50,15 @@ export default function MobileBottomNav({ role = 'etoser' }) {
   const pathname = usePathname();
   const items = ROLE_NAV_ITEMS[role] || ROLE_NAV_ITEMS.etoser;
   const theme = THEME_STYLES[role] || THEME_STYLES.etoser;
+  const isFiveCols = items.length === 5;
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-2xl border-t border-slate-200/90 shadow-[0_-8px_25px_rgba(0,0,0,0.08)] pl-[max(0.5rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))] pb-[max(env(safe-area-inset-bottom,0px),0.5rem)] pt-1.5 transition-all select-none">
-      <div className="flex justify-around items-center max-w-lg mx-auto">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-2xl border-t border-slate-200/90 shadow-[0_-8px_25px_rgba(0,0,0,0.08)] pl-[max(0.25rem,env(safe-area-inset-left,0px))] pr-[max(0.25rem,env(safe-area-inset-right,0px))] pb-[max(env(safe-area-inset-bottom,0px),0.5rem)] pt-1.5 transition-all select-none">
+      <div
+        className={`grid ${
+          isFiveCols ? 'grid-cols-5' : 'grid-cols-4'
+        } items-center max-w-lg mx-auto`}
+      >
         {items.map((item, index) => {
           const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
           const Icon = item.icon;
@@ -62,7 +68,7 @@ export default function MobileBottomNav({ role = 'etoser' }) {
               key={index}
               href={item.href}
               scroll={false}
-              className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-2xl min-w-[64px] transition-all relative ${
+              className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl min-w-0 transition-all relative ${
                 isActive 
                   ? `${theme.activeText} font-bold` 
                   : 'text-slate-400 hover:text-slate-600 font-medium'
@@ -79,7 +85,9 @@ export default function MobileBottomNav({ role = 'etoser' }) {
               </div>
 
               {/* Short Label */}
-              <span className="text-[10px] tracking-tight mt-0.5">{item.label}</span>
+              <span className="text-[10px] leading-tight tracking-tight mt-0.5 whitespace-nowrap truncate max-w-full">
+                {item.label}
+              </span>
             </Link>
           );
         })}

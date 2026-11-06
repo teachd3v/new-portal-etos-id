@@ -83,19 +83,7 @@ export default function EtoserHeader({ handleLogout }) {
     <header className="pt-[env(safe-area-inset-top,0px)] min-h-[calc(4rem+env(safe-area-inset-top,0px))] md:min-h-[6rem] px-4 md:px-8 flex items-center justify-between shrink-0 bg-white/40 md:bg-white/20 backdrop-blur-md border-b border-white/30 sticky top-0 z-30 transition-all select-none">
       {/* Mobile Navigation Dropdown (< md) */}
       <div className="md:hidden">
-        {isPenilaian ? (
-          <div className="relative">
-            <select
-              value={pathname}
-              onChange={(e) => router.push(e.target.value)}
-              className="header-pill-select bg-white/90 backdrop-blur-md border border-sky-200/90 text-sky-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-sky-500/30 cursor-pointer max-w-[165px] sm:max-w-[210px] truncate"
-            >
-              <option value="/etoser/monev-bulanan">Monitoring Bulanan</option>
-              <option value="/etoser/penilaian-mandiri">Asesmen RELI</option>
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 text-sky-600 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
-        ) : isProfil ? (
+        {isProfil ? (
           <div className="relative">
             <select
               value={`/etoser/profil?tab=${tab}`}

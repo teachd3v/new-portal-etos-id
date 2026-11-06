@@ -1,27 +1,18 @@
 "use client";
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, CalendarCheck, FileText, UserCircle, LogOut } from 'lucide-react';
+import { LayoutDashboard, CalendarCheck, ClipboardCheck, Compass, UserCircle } from 'lucide-react';
 
 export default function EtoserSidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const handleLogout = async () => {
-    try {
-      const res = await fetch('/api/auth/logout', { method: 'POST' });
-      if (res.ok) router.push('/login');
-    } catch (error) {
-      console.error('Logout failed', error);
-    }
-  };
-
   const navItems = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/etoser" },
     { icon: CalendarCheck, label: "Presensi", href: "/etoser/presensi" },
-    { icon: FileText, label: "Monitoring & Penilaian", href: "/etoser/monev-bulanan", isActive: (p) => p.startsWith('/etoser/penilaian-mandiri') || p.startsWith('/etoser/monev-bulanan') },
-
-    { icon: UserCircle, label: "Profil & Portofolio", href: "/etoser/profil" },
+    { icon: ClipboardCheck, label: "Monitoring Bulanan", href: "/etoser/monev-bulanan", isActive: (p) => p.startsWith('/etoser/monev-bulanan') },
+    { icon: Compass, label: "Asesmen RELI", href: "/etoser/penilaian-mandiri", isActive: (p) => p.startsWith('/etoser/penilaian-mandiri') },
+    { icon: UserCircle, label: "Profil & Portofolio", href: "/etoser/profil", isActive: (p) => p.startsWith('/etoser/profil') },
   ];
 
   return (
@@ -35,7 +26,7 @@ export default function EtoserSidebar() {
       {/* Main Body */}
       <aside className="flex-1 w-24 bg-sky-600 text-white flex flex-col items-center justify-center relative z-10">
         
-        <nav className="flex flex-col gap-6 items-center w-full">
+        <nav className="flex flex-col gap-5 items-center w-full">
           {navItems.map((item, index) => {
             const isActive = item.isActive ? item.isActive(pathname) : pathname === item.href;
             return (
