@@ -14,8 +14,8 @@ import {
   Plus,
   Trash2,
   X,
-  Lock,
-  ShieldAlert
+  ShieldAlert,
+  XCircle
 } from 'lucide-react';
 import MonitoringDetailModal from '@/components/admin/dashboard/MonitoringDetailModal';
 import { toast } from 'react-hot-toast';
@@ -93,7 +93,6 @@ export default function FasilMonitoringBinaanPage() {
     ? katalogSanksi.filter(k => k.kategori === selectedKategori)
     : katalogSanksi;
   const chosenCatalogItem = katalogSanksi.find(k => k.id === selectedPelanggaranId) || null;
-  const isPeriodOpen = !!data?.schedule?.isOpen;
 
   const handleAddSanksi = async (e) => {
     e.preventDefault();
@@ -118,7 +117,7 @@ export default function FasilMonitoringBinaanPage() {
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        toast.success("Usulan sanksi berhasil disimpan!");
+        toast.success("Usulan sanksi berhasil dikirim untuk diverifikasi Admin!");
         setSelectedPelanggaranId('');
         setSanksiKeterangan('');
         await fetchData();
@@ -140,7 +139,7 @@ export default function FasilMonitoringBinaanPage() {
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        toast.success("Data sanksi berhasil dihapus");
+        toast.success("Usulan sanksi berhasil dibatalkan");
         await fetchData();
       } else {
         toast.error(json.error || "Gagal menghapus sanksi");
@@ -166,6 +165,28 @@ export default function FasilMonitoringBinaanPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const getStatusBadge = (status) => {
+    if (status === 'APPROVED') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">
+          <CheckCircle2 className="w-3 h-3" /> Terverifikasi Admin
+        </span>
+      );
+    }
+    if (status === 'REJECTED') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md bg-slate-200 text-slate-600">
+          <XCircle className="w-3 h-3" /> Ditolak Admin
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200">
+        <Clock className="w-3 h-3" /> Menunggu Verifikasi Admin
+      </span>
+    );
+  };
+
   return (
     <div className="max-w-[1400px] mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       
@@ -178,7 +199,7 @@ export default function FasilMonitoringBinaanPage() {
               <span>Monitoring Bulanan & Sanksi Binaan</span>
             </h1>
             <p className="text-orange-100/90 font-medium text-xs md:text-base max-w-2xl hidden md:block">
-              Pantau kepatuhan evaluasi bulanan serta input usulan sanksi & pemotongan credit point Etoser di wilayah binaanmu.
+              Pantau kepatuhan evaluasi bulanan serta ajukan usulan sanksi Etoser kapan pun untuk diverifikasi oleh Admin.
             </p>
           </div>
           
@@ -198,34 +219,6 @@ export default function FasilMonitoringBinaanPage() {
         {/* Decorative elements */}
         <div className="absolute right-0 top-0 w-96 h-96 bg-orange-400 opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
       </div>
-
-      {/* Period Status Banner for Sanksi Input */}
-      {data?.schedule && (
-        <div className={`rounded-xl md:rounded-2xl p-3 md:p-4 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-xs ${
-          isPeriodOpen
-            ? 'bg-emerald-50/90 border-emerald-200 text-emerald-950'
-            : 'bg-amber-50/90 border-amber-200 text-amber-950'
-        }`}>
-          <div className="flex items-start sm:items-center gap-2.5">
-            <div className={`p-2 rounded-xl shrink-0 ${isPeriodOpen ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-              {isPeriodOpen ? <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5" /> : <Lock className="w-4 h-4 md:w-5 md:h-5" />}
-            </div>
-            <div>
-              <p className="text-xs md:text-sm font-black">
-                {isPeriodOpen ? 'Periode Input Sanksi Bulanan Dibuka' : 'Periode Input Sanksi Bulanan Terkunci'}
-              </p>
-              <p className="text-[11px] md:text-xs opacity-80 font-medium mt-0.5">
-                {data.schedule.message}
-              </p>
-            </div>
-          </div>
-          <span className={`text-[10px] md:text-xs font-extrabold px-2.5 py-1 rounded-full shrink-0 ${
-            isPeriodOpen ? 'bg-emerald-600 text-white' : 'bg-amber-200/80 text-amber-900'
-          }`}>
-            Jadwal: Tgl {data.schedule.start} – {data.schedule.end}
-          </span>
-        </div>
-      )}
 
       {/* Filter and Stats Bar */}
       <div className="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-xl md:rounded-2xl p-3 md:p-4 flex flex-wrap gap-2.5 md:gap-4 shadow-sm items-center">
@@ -316,7 +309,7 @@ export default function FasilMonitoringBinaanPage() {
         <div className="mb-4 md:mb-6">
           <h3 className="text-lg md:text-xl font-black text-slate-900">Daftar Hasil Monitoring & Usulan Sanksi Binaan</h3>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Rincian pengisian monitoring mandiri dan pencatatan poin sanksi/potongan uang saku periode {bulan} {tahun}.
+            Rincian pengisian monitoring mandiri dan pengajuan usulan sanksi Etoser periode {bulan} {tahun}.
           </p>
         </div>
 
@@ -602,9 +595,14 @@ export default function FasilMonitoringBinaanPage() {
                 {selectedEtoserForSanksi.sanksiList && selectedEtoserForSanksi.sanksiList.length > 0 ? (
                   <div className="space-y-2.5">
                     {selectedEtoserForSanksi.sanksiList.map((item) => (
-                      <div key={item.id} className="p-3.5 rounded-2xl border border-rose-200/80 bg-rose-50/40 flex items-start justify-between gap-3">
+                      <div key={item.id} className={`p-3.5 rounded-2xl border flex items-start justify-between gap-3 ${
+                        item.status === 'REJECTED'
+                          ? 'border-slate-200 bg-slate-50 opacity-70'
+                          : 'border-rose-200/80 bg-rose-50/40'
+                      }`}>
                         <div className="space-y-1.5 flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
+                            {getStatusBadge(item.status)}
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-800">
                               {item.kategori}
                             </span>
@@ -628,13 +626,13 @@ export default function FasilMonitoringBinaanPage() {
                           )}
                         </div>
 
-                        {isPeriodOpen && (
+                        {item.status !== 'APPROVED' && (
                           <button
                             type="button"
                             disabled={deletingSanksiId === item.id}
                             onClick={() => handleDeleteSanksi(item.id)}
                             className="p-2 rounded-xl bg-white hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors shrink-0 cursor-pointer disabled:opacity-50"
-                            title="Hapus Sanksi"
+                            title="Batalkan / Hapus Usulan Sanksi"
                           >
                             {deletingSanksiId === item.id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -653,105 +651,93 @@ export default function FasilMonitoringBinaanPage() {
                 )}
               </div>
 
-              {/* Add Sanction Form (Only when Period is Open) */}
-              {isPeriodOpen ? (
-                <form onSubmit={handleAddSanksi} className="space-y-4 pt-3 border-t border-slate-200">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                    <Plus className="w-4 h-4 text-rose-600" />
-                    Tambah Usulan Sanksi Baru ({bulan} {tahun})
-                  </h4>
+              {/* Add Sanction Form (Available Anytime) */}
+              <form onSubmit={handleAddSanksi} className="space-y-4 pt-3 border-t border-slate-200">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                  <Plus className="w-4 h-4 text-rose-600" />
+                  Tambah Usulan Sanksi Baru ({bulan} {tahun})
+                </h4>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">Filter Kategori</label>
-                      <select
-                        value={selectedKategori}
-                        onChange={(e) => {
-                          setSelectedKategori(e.target.value);
-                          setSelectedPelanggaranId('');
-                        }}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
-                      >
-                        <option value="">Semua Kategori ({katalogSanksi.length})</option>
-                        {kategoriOptions.map((kat) => (
-                          <option key={kat} value={kat}>{kat}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">Pilih Jenis Pelanggaran *</label>
-                      <select
-                        required
-                        value={selectedPelanggaranId}
-                        onChange={(e) => setSelectedPelanggaranId(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
-                      >
-                        <option value="">-- Pilih Detail Pelanggaran --</option>
-                        {filteredPelanggaranOptions.map((item) => (
-                          <option key={item.id} value={item.id}>
-                            [{item.poin} Poin | {item.credit_perform}] {item.detail_pelanggaran}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Filter Kategori</label>
+                    <select
+                      value={selectedKategori}
+                      onChange={(e) => {
+                        setSelectedKategori(e.target.value);
+                        setSelectedPelanggaranId('');
+                      }}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+                    >
+                      <option value="">Semua Kategori ({katalogSanksi.length})</option>
+                      {kategoriOptions.map((kat) => (
+                        <option key={kat} value={kat}>{kat}</option>
+                      ))}
+                    </select>
                   </div>
-
-                  {chosenCatalogItem && (
-                    <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/90 space-y-1.5 text-xs">
-                      <p className="font-bold text-amber-950">{chosenCatalogItem.detail_pelanggaran}</p>
-                      <div className="flex flex-wrap gap-3 text-[11px] font-bold text-amber-900 pt-1">
-                        <span>Kategori: <strong>{chosenCatalogItem.kategori}</strong></span>
-                        <span>•</span>
-                        <span className="text-rose-700">Bobot: <strong>{chosenCatalogItem.poin} Poin</strong></span>
-                        <span>•</span>
-                        <span className="text-rose-700">Potongan Uang Saku (Credit Perform): <strong>{chosenCatalogItem.credit_perform}</strong></span>
-                        <span>•</span>
-                        <span>Masa Perbaikan: <strong>{chosenCatalogItem.masa_perbaikan}</strong></span>
-                      </div>
-                    </div>
-                  )}
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Keterangan / Catatan Kronologi (Opsional)
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={sanksiKeterangan}
-                      onChange={(e) => setSanksiKeterangan(e.target.value)}
-                      placeholder="Contoh: Tidak hadir pembinaan wilayah pekan ke-2 tanpa keterangan..."
-                      className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={submittingSanksi || !selectedPelanggaranId}
-                    className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer"
-                  >
-                    {submittingSanksi ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" /> Menyimpan Sanksi...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4" /> Simpan Usulan Sanksi
-                      </>
-                    )}
-                  </button>
-                </form>
-              ) : (
-                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3">
-                  <Lock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                  <div className="text-xs text-amber-900">
-                    <p className="font-bold">Input Sanksi Sedang Terkunci</p>
-                    <p className="mt-0.5 opacity-90">
-                      {data?.schedule?.message || 'Penambahan atau penghapusan sanksi hanya dapat dilakukan pada masa periode Monitoring Bulanan yang ditentukan Admin.'}
-                    </p>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Pilih Jenis Pelanggaran *</label>
+                    <select
+                      required
+                      value={selectedPelanggaranId}
+                      onChange={(e) => setSelectedPelanggaranId(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+                    >
+                      <option value="">-- Pilih Detail Pelanggaran --</option>
+                      {filteredPelanggaranOptions.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          [{item.poin} Poin | {item.credit_perform}] {item.detail_pelanggaran}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-              )}
+
+                {chosenCatalogItem && (
+                  <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/90 space-y-1.5 text-xs">
+                    <p className="font-bold text-amber-950">{chosenCatalogItem.detail_pelanggaran}</p>
+                    <div className="flex flex-wrap gap-3 text-[11px] font-bold text-amber-900 pt-1">
+                      <span>Kategori: <strong>{chosenCatalogItem.kategori}</strong></span>
+                      <span>•</span>
+                      <span className="text-rose-700">Bobot: <strong>{chosenCatalogItem.poin} Poin</strong></span>
+                      <span>•</span>
+                      <span className="text-rose-700">Potongan Uang Saku (Credit Perform): <strong>{chosenCatalogItem.credit_perform}</strong></span>
+                      <span>•</span>
+                      <span>Masa Perbaikan: <strong>{chosenCatalogItem.masa_perbaikan}</strong></span>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Keterangan / Catatan Kronologi (Opsional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={sanksiKeterangan}
+                    onChange={(e) => setSanksiKeterangan(e.target.value)}
+                    placeholder="Contoh: Tidak hadir pembinaan wilayah pekan ke-2 tanpa keterangan..."
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submittingSanksi || !selectedPelanggaranId}
+                  className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer"
+                >
+                  {submittingSanksi ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Mengirim Usulan Sanksi...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" /> Kirim Usulan Sanksi ke Admin
+                    </>
+                  )}
+                </button>
+              </form>
             </div>
 
             {/* Modal Footer */}

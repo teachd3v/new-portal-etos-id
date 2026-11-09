@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { users, sanksi_user, katalog_sanksi } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { getAuthUser } from '@/lib/auth';
 import crypto from 'crypto';
 
@@ -11,12 +11,13 @@ const MONTH_NAMES = [
 ];
 
 function summarizeCreditPerform(sanksiItems) {
-  if (!sanksiItems || sanksiItems.length === 0) return '0%';
+  const validItems = (sanksiItems || []).filter(item => item.status !== 'REJECTED');
+  if (validItems.length === 0) return '0%';
   let hasDO = false;
   let totalPercent = 0;
 
-  for (const item of sanksiItems) {
-    const raw = String(item.credit_perform || '').trim().toUpperCase();
+  for (const item of validItems) {
+    const raw = String(item.credit_perform || item.creditPerform || '').trim().toUpperCase();
     if (raw === 'DO' || raw.includes('DO')) {
       hasDO = true;
     } else {
@@ -48,6 +49,7 @@ export async function GET(req) {
     const wilayah = searchParams.get('wilayah') || 'all';
     const angkatan = searchParams.get('angkatan') || 'all';
     const kategori = searchParams.get('kategori') || 'all';
+    const statusFilter = searchParams.get('status') || 'all';
 
     const allUsers = await db.select().from(users);
     const allSanksi = await db.select().from(sanksi_user);
@@ -75,6 +77,7 @@ export async function GET(req) {
         const etoser = userMap[s.user_id] || {};
         const fasil = userMap[s.fasil_id] || {};
         const cat = katalogMap[s.katalog_sanksi_id] || {};
+        const isInputByAdmin = fasil.role?.toUpperCase() === 'ADMIN' || s.fasil_id === authUser.id;
 
         return {
           id: s.id,
@@ -83,7 +86,8 @@ export async function GET(req) {
           wilayah: etoser.wilayah || '-',
           angkatan: etoser.angkatan || '-',
           fasilId: s.fasil_id,
-          fasilName: fasil.name || (s.fasil_id === authUser.id ? 'Admin Pusat' : 'Fasilitator'),
+          fasilName: isInputByAdmin ? `Admin (${fasil.name || 'Pusat'})` : (fasil.name || 'Fasilitator'),
+          isInputByAdmin,
           katalogSanksiId: s.katalog_sanksi_id,
           kategori: cat.kategori || 'Lainnya',
           detailPelanggaran: cat.detail_pelanggaran || 'Pelanggaran',
@@ -91,7 +95,7 @@ export async function GET(req) {
           poin: Number(s.poin ?? cat.poin ?? 0),
           creditPerform: cat.credit_perform || '0%',
           keterangan: s.keterangan || '-',
-          status: s.status || 'APPROVED',
+          status: s.status || 'PENDING',
           periodMonth: s.period_month || '-',
           periodYear: s.period_year || '-',
           timestamp: s.timestamp
@@ -103,6 +107,7 @@ export async function GET(req) {
         if (wilayah !== 'all' && row.wilayah !== wilayah) return false;
         if (angkatan !== 'all' && row.angkatan !== angkatan) return false;
         if (kategori !== 'all' && row.kategori !== kategori) return false;
+        if (statusFilter !== 'all' && row.status !== statusFilter) return false;
         return true;
       })
       .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
@@ -121,12 +126,22 @@ export async function GET(req) {
           periodMonth: c.periodMonth,
           periodYear: c.periodYear,
           totalKasus: 0,
+          pendingCount: 0,
+          approvedCount: 0,
           totalPoin: 0,
+          approvedPoin: 0,
           cases: []
         };
       }
       groupedMap[groupKey].totalKasus += 1;
-      groupedMap[groupKey].totalPoin += Number(c.poin) || 0;
+      if (c.status === 'PENDING') groupedMap[groupKey].pendingCount += 1;
+      if (c.status === 'APPROVED') {
+        groupedMap[groupKey].approvedCount += 1;
+        groupedMap[groupKey].approvedPoin += Number(c.poin) || 0;
+      }
+      if (c.status !== 'REJECTED') {
+        groupedMap[groupKey].totalPoin += Number(c.poin) || 0;
+      }
       groupedMap[groupKey].cases.push({
         ...c,
         credit_perform: c.creditPerform
@@ -134,15 +149,24 @@ export async function GET(req) {
     });
 
     const summaryByEtoser = Object.values(groupedMap)
-      .map(g => ({
-        ...g,
-        totalCreditDeduction: summarizeCreditPerform(g.cases),
-        pelanggaranRingkas: g.cases.map(x => `${x.detailPelanggaran} (${x.poin} Poin / ${x.creditPerform})`).join('; ')
-      }))
+      .map(g => {
+        const activeCases = g.cases.filter(x => x.status !== 'REJECTED');
+        const approvedCases = g.cases.filter(x => x.status === 'APPROVED');
+        return {
+          ...g,
+          totalCreditDeduction: summarizeCreditPerform(activeCases),
+          approvedCreditDeduction: summarizeCreditPerform(approvedCases),
+          pelanggaranRingkas: activeCases
+            .map(x => `[${x.status === 'APPROVED' ? 'Terverifikasi' : 'Menunggu'}] ${x.detailPelanggaran} (${x.poin} Poin / ${x.creditPerform})`)
+            .join('; ')
+        };
+      })
       .sort((a, b) => b.totalPoin - a.totalPoin);
 
-    const uniqueEtoserCount = new Set(enrichedCases.map(c => c.etoserId)).size;
-    const totalPoinSum = enrichedCases.reduce((acc, c) => acc + (Number(c.poin) || 0), 0);
+    const activeCasesAll = enrichedCases.filter(c => c.status !== 'REJECTED');
+    const uniqueEtoserCount = new Set(activeCasesAll.map(c => c.etoserId)).size;
+    const pendingCasesCount = enrichedCases.filter(c => c.status === 'PENDING').length;
+    const totalPoinSum = activeCasesAll.reduce((acc, c) => acc + (Number(c.poin) || 0), 0);
     const heavyCasesCount = summaryByEtoser.filter(g => {
       if (g.totalCreditDeduction === 'DO') return true;
       const pct = parseFloat(String(g.totalCreditDeduction).replace('%', ''));
@@ -154,6 +178,7 @@ export async function GET(req) {
       stats: {
         etoserKenaSanksi: uniqueEtoserCount,
         totalKasus: enrichedCases.length,
+        menungguVerifikasi: pendingCasesCount,
         totalPoin: totalPoinSum,
         kasusBeratAtauDO: heavyCasesCount
       },
@@ -212,11 +237,71 @@ export async function POST(req) {
 
     return NextResponse.json({
       success: true,
-      message: 'Data sanksi berhasil ditambahkan.'
+      message: 'Sanksi berhasil ditambahkan dan langsung terverifikasi.'
     });
   } catch (error) {
     console.error('Admin Monitoring Sanksi POST Error:', error);
     return NextResponse.json({ error: error.message || 'Gagal menyimpan sanksi' }, { status: 500 });
+  }
+}
+
+export async function PUT(req) {
+  try {
+    const authUser = await getAuthUser(req);
+    if (!authUser || authUser.role?.toUpperCase() !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { id, ids, status, katalog_sanksi_id, keterangan } = body;
+
+    if (!status || !['APPROVED', 'REJECTED', 'PENDING'].includes(status)) {
+      return NextResponse.json({ error: 'Status verifikasi tidak valid.' }, { status: 400 });
+    }
+
+    // Support bulk verification (e.g. Approve all pending for an Etoser or period)
+    if (Array.isArray(ids) && ids.length > 0) {
+      await db.update(sanksi_user).set({ status }).where(inArray(sanksi_user.id, ids));
+      return NextResponse.json({
+        success: true,
+        message: `${ids.length} usulan sanksi berhasil diperbarui ke status ${status}.`
+      });
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID sanksi wajib disertakan.' }, { status: 400 });
+    }
+
+    const updateValues = { status };
+
+    if (katalog_sanksi_id) {
+      const catalogItems = await db
+        .select()
+        .from(katalog_sanksi)
+        .where(eq(katalog_sanksi.id, katalog_sanksi_id));
+      if (catalogItems.length > 0) {
+        updateValues.katalog_sanksi_id = catalogItems[0].id;
+        updateValues.poin = Number(catalogItems[0].poin) || 0;
+      }
+    }
+
+    if (keterangan !== undefined) {
+      updateValues.keterangan = keterangan?.trim() || null;
+    }
+
+    await db.update(sanksi_user).set(updateValues).where(eq(sanksi_user.id, id));
+
+    return NextResponse.json({
+      success: true,
+      message: status === 'APPROVED'
+        ? 'Usulan sanksi berhasil diverifikasi & disetujui!'
+        : status === 'REJECTED'
+          ? 'Usulan sanksi telah ditolak.'
+          : 'Status sanksi diperbarui.'
+    });
+  } catch (error) {
+    console.error('Admin Monitoring Sanksi PUT Error:', error);
+    return NextResponse.json({ error: error.message || 'Gagal memverifikasi sanksi' }, { status: 500 });
   }
 }
 

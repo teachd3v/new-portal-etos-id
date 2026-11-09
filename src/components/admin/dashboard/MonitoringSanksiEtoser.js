@@ -13,7 +13,11 @@ import {
   Plus,
   X,
   FileWarning,
-  Wallet
+  Wallet,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  Check
 } from 'lucide-react';
 import StatCard from './StatCard';
 import ConfirmModal from '@/components/ui/ConfirmModal';
@@ -36,6 +40,7 @@ export default function MonitoringSanksiEtoser() {
   const [wilayah, setWilayah] = useState('all');
   const [angkatan, setAngkatan] = useState('all');
   const [kategori, setKategori] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('rekap'); // 'rekap' (per Etoser for Finance) | 'rincian' (per violation)
 
@@ -48,6 +53,7 @@ export default function MonitoringSanksiEtoser() {
   const [formTahun, setFormTahun] = useState(now.getFullYear().toString());
   const [formKeterangan, setFormKeterangan] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [verifyingId, setVerifyingId] = useState(null);
 
   // Confirm Delete Modal
   const [confirmConfig, setConfirmConfig] = useState(null);
@@ -60,7 +66,8 @@ export default function MonitoringSanksiEtoser() {
         tahun,
         wilayah,
         angkatan,
-        kategori
+        kategori,
+        status: statusFilter
       }).toString();
       const res = await fetch(`/api/admin/monitoring/sanksi?${qs}`);
       if (res.ok) {
@@ -74,7 +81,7 @@ export default function MonitoringSanksiEtoser() {
     } finally {
       setLoading(false);
     }
-  }, [bulan, tahun, wilayah, angkatan, kategori]);
+  }, [bulan, tahun, wilayah, angkatan, kategori, statusFilter]);
 
   useEffect(() => {
     fetchData();
@@ -99,6 +106,67 @@ export default function MonitoringSanksiEtoser() {
     row.detailPelanggaran.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const pendingCasesInView = (data?.cases || []).filter(c => c.status === 'PENDING');
+
+  const openAddModalForEtoser = (etoserId = '', targetMonth = '', targetYear = '') => {
+    setFormUserId(etoserId || '');
+    setFormBulan(targetMonth || (bulan === 'all' ? MONTH_OPTIONS[now.getMonth()] : bulan));
+    setFormTahun(targetYear || (tahun === 'all' ? now.getFullYear().toString() : tahun));
+    setFormKategori('');
+    setFormKatalogId('');
+    setFormKeterangan('');
+    setIsAddModalOpen(true);
+  };
+
+  const handleVerifyCase = async (id, newStatus) => {
+    setVerifyingId(id);
+    try {
+      const res = await fetch('/api/admin/monitoring/sanksi', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: newStatus })
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        toast.success(json.message);
+        fetchData();
+      } else {
+        toast.error(json.error || "Gagal memperbarui status sanksi");
+      }
+    } catch (err) {
+      toast.error("Terjadi kesalahan jaringan");
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
+  const handleBulkApprovePending = () => {
+    if (pendingCasesInView.length === 0) return;
+    setConfirmConfig({
+      title: "Verifikasi Semua Usulan Fasil",
+      message: `Setujui dan verifikasi ${pendingCasesInView.length} usulan sanksi dari Fasilitator yang berstatus Menunggu?`,
+      onConfirm: async () => {
+        try {
+          const ids = pendingCasesInView.map(c => c.id);
+          const res = await fetch('/api/admin/monitoring/sanksi', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids, status: 'APPROVED' })
+          });
+          const json = await res.json();
+          if (res.ok && json.success) {
+            toast.success(`${ids.length} usulan sanksi berhasil diverifikasi!`);
+            fetchData();
+          } else {
+            toast.error(json.error || "Gagal memverifikasi massal");
+          }
+        } catch (err) {
+          toast.error("Terjadi kesalahan jaringan");
+        }
+      }
+    });
+  };
+
   const handleExportCSV = () => {
     const rowsToExport = viewMode === 'rekap' ? filteredSummary : filteredCases;
     if (rowsToExport.length === 0) {
@@ -118,11 +186,15 @@ export default function MonitoringSanksiEtoser() {
         "Jumlah Pelanggaran",
         "Total Poin Sanksi",
         "Potongan Uang Saku (Credit Perform)",
+        "Status Verifikasi",
         "Rincian Daftar Pelanggaran"
       ];
       csvRows.push(headers.join(","));
 
       filteredSummary.forEach(row => {
+        const statusSummary = row.pendingCount > 0
+          ? `${row.approvedCount} Terverifikasi, ${row.pendingCount} Menunggu`
+          : 'Terverifikasi Semua';
         const values = [
           `"${row.etoserId}"`,
           `"${row.etoserName.replace(/"/g, '""')}"`,
@@ -133,6 +205,7 @@ export default function MonitoringSanksiEtoser() {
           row.totalKasus,
           row.totalPoin,
           `"${row.totalCreditDeduction}"`,
+          `"${statusSummary}"`,
           `"${row.pelanggaranRingkas.replace(/"/g, '""')}"`
         ];
         csvRows.push(values.join(","));
@@ -151,12 +224,18 @@ export default function MonitoringSanksiEtoser() {
         "Masa Perbaikan",
         "Poin Sanksi",
         "Potongan Uang Saku (Credit Perform)",
+        "Status Verifikasi",
         "Keterangan / Kronologi",
-        "Pelapor (Fasilitator)"
+        "Pelapor"
       ];
       csvRows.push(headers.join(","));
 
       filteredCases.forEach(row => {
+        const statusLabel = row.status === 'APPROVED'
+          ? 'Terverifikasi'
+          : row.status === 'REJECTED'
+            ? 'Ditolak'
+            : 'Menunggu Verifikasi';
         const values = [
           `"${row.id}"`,
           `"${row.etoserId}"`,
@@ -170,6 +249,7 @@ export default function MonitoringSanksiEtoser() {
           `"${row.masaPerbaikan}"`,
           row.poin,
           `"${row.creditPerform}"`,
+          `"${statusLabel}"`,
           `"${(row.keterangan || '-').replace(/"/g, '""')}"`,
           `"${(row.fasilName || '-').replace(/"/g, '""')}"`
         ];
@@ -211,7 +291,7 @@ export default function MonitoringSanksiEtoser() {
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        toast.success("Sanksi Etoser berhasil ditambahkan!");
+        toast.success("Sanksi Etoser berhasil ditambahkan & langsung terverifikasi!");
         setIsAddModalOpen(false);
         setFormUserId('');
         setFormKatalogId('');
@@ -249,14 +329,36 @@ export default function MonitoringSanksiEtoser() {
     });
   };
 
+  const renderStatusBadge = (status) => {
+    if (status === 'APPROVED') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">
+          <CheckCircle2 className="w-3 h-3" /> Terverifikasi
+        </span>
+      );
+    }
+    if (status === 'REJECTED') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md bg-slate-200 text-slate-600">
+          <XCircle className="w-3 h-3" /> Ditolak
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200">
+        <Clock className="w-3 h-3" /> Menunggu Verifikasi
+      </span>
+    );
+  };
+
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
       
       {/* Filters Bar */}
       <div className="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl p-2.5 md:p-3.5 shadow-sm">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-center w-full">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-center w-full">
           {/* Month & Year Select */}
-          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1.5 md:py-2 rounded-xl w-full">
+          <div className="col-span-2 sm:col-span-1 flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1.5 md:py-2 rounded-xl w-full">
             <Calendar className="w-3.5 h-3.5 text-teal-600 shrink-0" />
             <select 
               value={bulan} 
@@ -318,6 +420,18 @@ export default function MonitoringSanksiEtoser() {
               <option key={k} value={k}>{k}</option>
             ))}
           </select>
+
+          {/* Status Verifikasi Filter */}
+          <select 
+            value={statusFilter} 
+            onChange={(e) => setStatusFilter(e.target.value)} 
+            className="w-full py-1.5 md:py-2 px-2.5 md:px-3 bg-white border border-slate-200 rounded-xl text-[11px] md:text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 text-slate-800 font-bold"
+          >
+            <option value="all">Semua Status</option>
+            <option value="PENDING">Menunggu Verifikasi</option>
+            <option value="APPROVED">Terverifikasi</option>
+            <option value="REJECTED">Ditolak</option>
+          </select>
         </div>
       </div>
 
@@ -332,10 +446,10 @@ export default function MonitoringSanksiEtoser() {
           loading={loading} 
         />
         <StatCard 
-          title="Total Pelanggaran" 
-          value={data?.stats?.totalKasus || 0} 
-          unit="Kasus" 
-          icon={FileWarning} 
+          title="Menunggu Verifikasi" 
+          value={data?.stats?.menungguVerifikasi || 0} 
+          unit="Usulan Fasil" 
+          icon={Clock} 
           color="amber" 
           loading={loading} 
         />
@@ -364,10 +478,10 @@ export default function MonitoringSanksiEtoser() {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div>
             <h3 className="text-base md:text-xl font-black text-slate-900">
-              Daftar Penerima Sanksi & Potongan Credit Point
+              Verifikasi & Daftar Penerima Sanksi (Credit Point)
             </h3>
             <p className="text-[11px] md:text-xs text-slate-500 font-medium mt-0.5">
-              Rekapitulasi poin pelanggaran bulanan sebagai dasar pemotongan uang saku Etoser oleh Keuangan ({bulan === 'all' ? 'Semua Bulan' : bulan} {tahun === 'all' ? '' : tahun}).
+              Verifikasi usulan sanksi dari Fasilitator atau tambahkan sanksi langsung sebagai dasar pemotongan uang saku Keuangan.
             </p>
           </div>
 
@@ -398,16 +512,22 @@ export default function MonitoringSanksiEtoser() {
               </button>
             </div>
 
+            {pendingCasesInView.length > 0 && (
+              <button
+                type="button"
+                onClick={handleBulkApprovePending}
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-2 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4" /> Verifikasi Semua ({pendingCasesInView.length})
+              </button>
+            )}
+
             <button
               type="button"
-              onClick={() => {
-                setFormBulan(bulan === 'all' ? MONTH_OPTIONS[now.getMonth()] : bulan);
-                setFormTahun(tahun === 'all' ? now.getFullYear().toString() : tahun);
-                setIsAddModalOpen(true);
-              }}
+              onClick={() => openAddModalForEtoser()}
               className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 bg-white hover:bg-teal-50 text-teal-800 border border-teal-200 px-3.5 py-2 rounded-xl font-bold text-xs transition-all shadow-xs active:scale-95 cursor-pointer"
             >
-              <Plus className="w-4 h-4 text-teal-700" /> Input Sanksi
+              <Plus className="w-4 h-4 text-teal-700" /> Input Sanksi Admin
             </button>
 
             <button
@@ -454,9 +574,18 @@ export default function MonitoringSanksiEtoser() {
                           <p className="text-[11px] text-slate-500 font-mono mt-0.5">
                             {row.etoserId} • {row.wilayah} ({row.angkatan})
                           </p>
-                          <span className="inline-block text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md mt-1">
-                            Periode: {row.periodMonth} {row.periodYear}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                            <span className="inline-block text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
+                              Periode: {row.periodMonth} {row.periodYear}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => openAddModalForEtoser(row.etoserId, row.periodMonth, row.periodYear)}
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-teal-800 bg-white border border-teal-200 hover:bg-teal-50 px-2 py-0.5 rounded-md cursor-pointer"
+                            >
+                              <Plus className="w-2.5 h-2.5" /> Tambah Sanksi
+                            </button>
+                          </div>
                         </div>
 
                         <div className="text-right shrink-0">
@@ -473,37 +602,62 @@ export default function MonitoringSanksiEtoser() {
                         </div>
                       </div>
 
-                      <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                          Daftar Pelanggaran:
+                          Daftar Pelanggaran & Verifikasi:
                         </span>
                         {row.cases.map((c) => (
-                          <div key={c.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 flex items-start justify-between gap-2 text-xs">
-                            <div className="space-y-0.5 min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
-                                  {c.kategori}
-                                </span>
-                                <span className="text-[10px] font-black text-rose-600">
-                                  {c.poin} Poin ({c.creditPerform})
-                                </span>
-                                <span className="text-[10px] text-slate-400">
-                                  • Masa: {c.masaPerbaikan}
-                                </span>
+                          <div key={c.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-2 text-xs">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="space-y-1 min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {renderStatusBadge(c.status)}
+                                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                                    {c.kategori}
+                                  </span>
+                                  <span className="text-[10px] font-black text-rose-600">
+                                    {c.poin} Poin ({c.creditPerform})
+                                  </span>
+                                </div>
+                                <p className="text-slate-800 font-semibold leading-snug">{c.detailPelanggaran}</p>
+                                <p className="text-[10px] text-slate-400">
+                                  Masa Perbaikan: {c.masaPerbaikan} • Oleh: {c.fasilName}
+                                </p>
+                                {c.keterangan && c.keterangan !== '-' && (
+                                  <p className="text-[11px] text-slate-500 italic">"{c.keterangan}"</p>
+                                )}
                               </div>
-                              <p className="text-slate-800 font-semibold leading-snug">{c.detailPelanggaran}</p>
-                              {c.keterangan && c.keterangan !== '-' && (
-                                <p className="text-[11px] text-slate-500 italic">"{c.keterangan}"</p>
-                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCase(c.id, row.etoserName)}
+                                className="p-1.5 text-rose-500 hover:bg-rose-100 rounded-lg shrink-0 cursor-pointer"
+                                title="Hapus"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteCase(c.id, row.etoserName)}
-                              className="p-1.5 text-rose-500 hover:bg-rose-100 rounded-lg shrink-0 cursor-pointer"
-                              title="Hapus"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+
+                            {c.status === 'PENDING' && (
+                              <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200/60">
+                                <button
+                                  type="button"
+                                  disabled={verifyingId === c.id}
+                                  onClick={() => handleVerifyCase(c.id, 'APPROVED')}
+                                  className="flex-1 py-1.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                                >
+                                  {verifyingId === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                  Verifikasi & Setujui
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={verifyingId === c.id}
+                                  onClick={() => handleVerifyCase(c.id, 'REJECTED')}
+                                  className="py-1.5 px-2.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50"
+                                >
+                                  <X className="w-3.5 h-3.5" /> Tolak
+                                </button>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -523,7 +677,7 @@ export default function MonitoringSanksiEtoser() {
                     <th className="p-4 font-black text-center">Periode</th>
                     <th className="p-4 font-black text-center">Total Poin</th>
                     <th className="p-4 font-black text-center">Potongan Credit (Uang Saku)</th>
-                    <th className="p-4 font-black">Rincian Pelanggaran & Masa Perbaikan</th>
+                    <th className="p-4 font-black">Rincian Pelanggaran & Verifikasi Admin</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -547,6 +701,13 @@ export default function MonitoringSanksiEtoser() {
                           <td className="p-4 whitespace-nowrap">
                             <div className="font-bold text-slate-900 text-sm">{row.etoserName}</div>
                             <div className="text-[11px] text-slate-400 font-mono mt-0.5">{row.etoserId}</div>
+                            <button
+                              type="button"
+                              onClick={() => openAddModalForEtoser(row.etoserId, row.periodMonth, row.periodYear)}
+                              className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                            >
+                              <Plus className="w-3 h-3" /> Tambah Sanksi
+                            </button>
                           </td>
                           <td className="p-4 font-semibold text-slate-600 whitespace-nowrap">
                             {row.wilayah} <span className="text-slate-300 mx-1">•</span> {row.angkatan}
@@ -575,13 +736,19 @@ export default function MonitoringSanksiEtoser() {
                               <Wallet className="w-3.5 h-3.5" />
                               {row.totalCreditDeduction === 'DO' ? 'Rekomendasi DO' : `Potong ${row.totalCreditDeduction}`}
                             </span>
+                            {row.pendingCount > 0 && (
+                              <span className="block text-[10px] font-bold text-amber-700 mt-1">
+                                {row.pendingCount} usulan menunggu verifikasi
+                              </span>
+                            )}
                           </td>
-                          <td className="p-4 min-w-[340px]">
+                          <td className="p-4 min-w-[380px]">
                             <div className="space-y-2">
                               {row.cases.map((c) => (
-                                <div key={c.id} className="p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-start justify-between gap-3 shadow-2xs">
-                                  <div className="space-y-1">
+                                <div key={c.id} className="p-3 rounded-xl bg-white border border-slate-200/80 flex items-start justify-between gap-3 shadow-2xs">
+                                  <div className="space-y-1 flex-1">
                                     <div className="flex items-center gap-1.5 flex-wrap">
+                                      {renderStatusBadge(c.status)}
                                       <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
                                         {c.kategori}
                                       </span>
@@ -592,7 +759,7 @@ export default function MonitoringSanksiEtoser() {
                                         • Masa Perbaikan: {c.masaPerbaikan}
                                       </span>
                                       <span className="text-[10px] text-slate-400">
-                                        • Pelapor: {c.fasilName}
+                                        • Oleh: {c.fasilName}
                                       </span>
                                     </div>
                                     <p className="font-bold text-slate-800 text-xs leading-snug">{c.detailPelanggaran}</p>
@@ -600,14 +767,39 @@ export default function MonitoringSanksiEtoser() {
                                       <p className="text-[11px] text-slate-500 italic">Catatan: "{c.keterangan}"</p>
                                     )}
                                   </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteCase(c.id, row.etoserName)}
-                                    className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors shrink-0 cursor-pointer"
-                                    title="Hapus kasus ini"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    {c.status === 'PENDING' && (
+                                      <>
+                                        <button
+                                          type="button"
+                                          disabled={verifyingId === c.id}
+                                          onClick={() => handleVerifyCase(c.id, 'APPROVED')}
+                                          className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] inline-flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                                          title="Verifikasi & Setujui Sanksi"
+                                        >
+                                          {verifyingId === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                          Setujui
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={verifyingId === c.id}
+                                          onClick={() => handleVerifyCase(c.id, 'REJECTED')}
+                                          className="px-2 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] inline-flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                                          title="Tolak Usulan"
+                                        >
+                                          <X className="w-3.5 h-3.5" /> Tolak
+                                        </button>
+                                      </>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteCase(c.id, row.etoserName)}
+                                      className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                      title="Hapus kasus ini"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -648,6 +840,7 @@ export default function MonitoringSanksiEtoser() {
                       </button>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
+                      {renderStatusBadge(c.status)}
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200">
                         {c.periodMonth} {c.periodYear}
                       </span>
@@ -662,10 +855,30 @@ export default function MonitoringSanksiEtoser() {
                     <div className="text-[11px] text-slate-500 flex flex-wrap gap-2 pt-1 border-t border-slate-100">
                       <span>Masa Perbaikan: <strong>{c.masaPerbaikan}</strong></span>
                       <span>•</span>
-                      <span>Pelapor: <strong>{c.fasilName}</strong></span>
+                      <span>Oleh: <strong>{c.fasilName}</strong></span>
                     </div>
                     {c.keterangan && c.keterangan !== '-' && (
                       <p className="text-[11px] text-slate-600 italic bg-slate-50 p-2 rounded-lg">"{c.keterangan}"</p>
+                    )}
+                    {c.status === 'PENDING' && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          disabled={verifyingId === c.id}
+                          onClick={() => handleVerifyCase(c.id, 'APPROVED')}
+                          className="flex-1 py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <Check className="w-3.5 h-3.5" /> Setujui
+                        </button>
+                        <button
+                          type="button"
+                          disabled={verifyingId === c.id}
+                          onClick={() => handleVerifyCase(c.id, 'REJECTED')}
+                          className="py-1.5 px-3 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" /> Tolak
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))
@@ -683,7 +896,7 @@ export default function MonitoringSanksiEtoser() {
                     <th className="p-4 font-black">Kategori & Pelanggaran</th>
                     <th className="p-4 font-black text-center">Poin</th>
                     <th className="p-4 font-black text-center">Credit Perform</th>
-                    <th className="p-4 font-black">Masa Perbaikan</th>
+                    <th className="p-4 font-black text-center">Status Verifikasi</th>
                     <th className="p-4 font-black">Keterangan / Pelapor</th>
                     <th className="p-4 font-black text-right">Aksi</th>
                   </tr>
@@ -707,9 +920,14 @@ export default function MonitoringSanksiEtoser() {
                           {c.periodMonth} {c.periodYear}
                         </td>
                         <td className="p-4 max-w-sm">
-                          <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 mb-1">
-                            {c.kategori}
-                          </span>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                              {c.kategori}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-semibold">
+                              Masa: {c.masaPerbaikan}
+                            </span>
+                          </div>
                           <p className="font-bold text-slate-800 leading-snug">{c.detailPelanggaran}</p>
                         </td>
                         <td className="p-4 text-center whitespace-nowrap">
@@ -718,22 +936,44 @@ export default function MonitoringSanksiEtoser() {
                         <td className="p-4 text-center whitespace-nowrap">
                           <span className="font-black text-amber-900 bg-amber-100 px-2.5 py-1 rounded-lg">{c.creditPerform}</span>
                         </td>
-                        <td className="p-4 whitespace-nowrap text-slate-600 font-medium">
-                          {c.masaPerbaikan}
+                        <td className="p-4 text-center whitespace-nowrap">
+                          {renderStatusBadge(c.status)}
                         </td>
                         <td className="p-4 max-w-xs">
                           <p className="text-slate-700 truncate" title={c.keterangan}>{c.keterangan}</p>
                           <span className="text-[10px] text-slate-400 font-semibold">Oleh: {c.fasilName}</span>
                         </td>
                         <td className="p-4 text-right whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteCase(c.id, c.etoserName)}
-                            className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-                            title="Hapus"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            {c.status === 'PENDING' && (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={verifyingId === c.id}
+                                  onClick={() => handleVerifyCase(c.id, 'APPROVED')}
+                                  className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Check className="w-3.5 h-3.5" /> Setujui
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={verifyingId === c.id}
+                                  onClick={() => handleVerifyCase(c.id, 'REJECTED')}
+                                  className="px-2 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <X className="w-3.5 h-3.5" /> Tolak
+                                </button>
+                              </>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCase(c.id, c.etoserName)}
+                              className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                              title="Hapus"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -761,8 +1001,8 @@ export default function MonitoringSanksiEtoser() {
                   <ShieldAlert className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-black">Input Sanksi Etoser</h3>
-                  <p className="text-xs text-teal-100">Catat pelanggaran & pemotongan credit point bulanan</p>
+                  <h3 className="text-base sm:text-lg font-black">Input Sanksi Etoser (Admin)</h3>
+                  <p className="text-xs text-teal-100">Sanksi yang diinput Admin otomatis berstatus Terverifikasi</p>
                 </div>
               </div>
               <button
@@ -874,7 +1114,7 @@ export default function MonitoringSanksiEtoser() {
                   rows={2}
                   value={formKeterangan}
                   onChange={(e) => setFormKeterangan(e.target.value)}
-                  placeholder="Catatan tambahan..."
+                  placeholder="Catatan verifikasi atau kronologi pelanggaran..."
                   className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                 />
               </div>
@@ -893,7 +1133,7 @@ export default function MonitoringSanksiEtoser() {
                   className="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                  Simpan Sanksi
+                  Simpan & Verifikasi
                 </button>
               </div>
             </form>

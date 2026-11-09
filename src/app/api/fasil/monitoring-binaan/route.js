@@ -7,9 +7,7 @@ import {
   instrumen_etoser,
   profil_user,
   katalog_sanksi,
-  sanksi_user,
-  app_settings,
-  periode_penilaian
+  sanksi_user
 } from '@/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { getAuthUser } from '@/lib/auth';
@@ -20,71 +18,13 @@ const MONTH_NAMES = [
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
 ];
 
-async function getMonitoringPeriodSchedule() {
-  const settingsRes = await db.select().from(app_settings);
-  const startStr = settingsRes.find(s => s.key === 'periode_fasil_start')?.value || '25';
-  const endStr = settingsRes.find(s => s.key === 'periode_fasil_end')?.value || '7';
-
-  let isOpen = false;
-  const today = new Date();
-  const currentDay = today.getDate();
-  let targetMonth = today.getMonth() + 1;
-  let targetYear = today.getFullYear();
-
-  const start = parseInt(startStr, 10) || 25;
-  const end = parseInt(endStr, 10) || 7;
-
-  if (start <= end) {
-    if (currentDay >= start && currentDay <= end) {
-      isOpen = true;
-    }
-  } else {
-    // Cross-month: e.g. 25th of this month to 7th of next month
-    if (currentDay >= start) {
-      isOpen = true;
-    } else if (currentDay <= end) {
-      isOpen = true;
-      targetMonth -= 1;
-      if (targetMonth === 0) {
-        targetMonth = 12;
-        targetYear -= 1;
-      }
-    }
-  }
-
-  let targetMonthName = MONTH_NAMES[targetMonth - 1] || MONTH_NAMES[today.getMonth()];
-
-  const manualPeriods = await db.select().from(periode_penilaian).where(
-    and(
-      eq(periode_penilaian.is_open, true),
-      inArray(periode_penilaian.tipe_instrumen, ['Self-Fasil', 'Monev-Fasil', 'Self-Etoser', 'Monev-Etoser'])
-    )
-  );
-  if (manualPeriods.length > 0) {
-    isOpen = true;
-    targetMonthName = manualPeriods[0].bulan || targetMonthName;
-    targetYear = manualPeriods[0].tahun ? parseInt(manualPeriods[0].tahun, 10) : targetYear;
-  }
-
-  return {
-    isOpen,
-    start,
-    end,
-    currentDay,
-    activeMonth: targetMonthName,
-    activeYear: targetYear.toString(),
-    message: isOpen
-      ? `Periode input Monitoring Bulanan & Usulan Sanksi sedang dibuka (Tgl ${start} s/d Tgl ${end}).`
-      : `Periode input Usulan Sanksi terkunci di luar jadwal Monitoring Bulanan (Jadwal buka: Tgl ${start} s/d Tgl ${end} setiap bulan).`
-  };
-}
-
 function summarizeCreditPerform(sanksiItems) {
-  if (!sanksiItems || sanksiItems.length === 0) return '0%';
+  const validItems = (sanksiItems || []).filter(item => item.status !== 'REJECTED');
+  if (validItems.length === 0) return '0%';
   let hasDO = false;
   let totalPercent = 0;
 
-  for (const item of sanksiItems) {
+  for (const item of validItems) {
     const raw = String(item.credit_perform || '').trim().toUpperCase();
     if (raw === 'DO' || raw.includes('DO')) {
       hasDO = true;
@@ -113,12 +53,10 @@ export async function GET(req) {
     }
     const fasil = fasilRecords[0];
 
-    const schedule = await getMonitoringPeriodSchedule();
-
     const { searchParams } = new URL(req.url);
     const now = new Date();
-    const defaultMonth = schedule.isOpen ? schedule.activeMonth : MONTH_NAMES[now.getMonth()];
-    const defaultYear = schedule.isOpen ? schedule.activeYear : now.getFullYear().toString();
+    const defaultMonth = MONTH_NAMES[now.getMonth()];
+    const defaultYear = now.getFullYear().toString();
 
     const bulan = searchParams.get('bulan') || defaultMonth;
     const tahun = searchParams.get('tahun') || defaultYear;
@@ -217,7 +155,7 @@ export async function GET(req) {
           poin: Number(s.poin ?? cat.poin ?? 0),
           credit_perform: cat.credit_perform || '-',
           keterangan: s.keterangan || '',
-          status: s.status || 'APPROVED',
+          status: s.status || 'PENDING',
           period_month: s.period_month,
           period_year: s.period_year,
           timestamp: s.timestamp
@@ -235,14 +173,15 @@ export async function GET(req) {
       const answers = report ? (answersByReport[report.id] || []) : [];
       const prof = profileMap[e.id] || {};
       const userSanksi = sanksiByUser[e.id] || [];
+      const activeUserSanksi = userSanksi.filter(item => item.status !== 'REJECTED');
 
-      if (userSanksi.length > 0) {
+      if (activeUserSanksi.length > 0) {
         etoserKenaSanksiCount++;
-        totalKasusSanksi += userSanksi.length;
+        totalKasusSanksi += activeUserSanksi.length;
       }
 
-      const totalPoinSanksi = userSanksi.reduce((acc, item) => acc + (Number(item.poin) || 0), 0);
-      const totalCreditDeduction = summarizeCreditPerform(userSanksi);
+      const totalPoinSanksi = activeUserSanksi.reduce((acc, item) => acc + (Number(item.poin) || 0), 0);
+      const totalCreditDeduction = summarizeCreditPerform(activeUserSanksi);
 
       let avgScore = 0;
       const varTotals = {};
@@ -304,7 +243,6 @@ export async function GET(req) {
         fasil_role: fasil.fasil_role
       },
       period: { bulan, tahun },
-      schedule,
       katalogSanksi,
       stats: {
         totalBinaan: binaanList.length,
@@ -329,14 +267,6 @@ export async function POST(req) {
     const authUser = await getAuthUser(req);
     if (!authUser || !authUser.role?.toUpperCase().includes('FASIL')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const schedule = await getMonitoringPeriodSchedule();
-    if (!schedule.isOpen) {
-      return NextResponse.json(
-        { error: schedule.message },
-        { status: 403 }
-      );
     }
 
     const body = await req.json();
@@ -368,7 +298,7 @@ export async function POST(req) {
       katalog_sanksi_id: catalogItem.id,
       poin: Number(catalogItem.poin) || 0,
       keterangan: keterangan?.trim() || null,
-      status: 'APPROVED',
+      status: 'PENDING',
       period_month: String(period_month),
       period_year: String(period_year),
       timestamp: new Date()
@@ -378,7 +308,7 @@ export async function POST(req) {
 
     return NextResponse.json({
       success: true,
-      message: 'Usulan sanksi berhasil ditambahkan.',
+      message: 'Usulan sanksi berhasil dikirim dan menunggu verifikasi Admin.',
       data: {
         ...newRecord,
         kategori: catalogItem.kategori,
@@ -400,14 +330,6 @@ export async function DELETE(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const schedule = await getMonitoringPeriodSchedule();
-    if (!schedule.isOpen) {
-      return NextResponse.json(
-        { error: schedule.message },
-        { status: 403 }
-      );
-    }
-
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) {
@@ -419,11 +341,18 @@ export async function DELETE(req) {
       return NextResponse.json({ error: 'Data sanksi tidak ditemukan.' }, { status: 404 });
     }
 
+    if (existing[0].status === 'APPROVED') {
+      return NextResponse.json(
+        { error: 'Sanksi yang sudah diverifikasi Admin tidak dapat dihapus oleh Fasilitator.' },
+        { status: 403 }
+      );
+    }
+
     await db.delete(sanksi_user).where(eq(sanksi_user.id, id));
 
     return NextResponse.json({
       success: true,
-      message: 'Data sanksi berhasil dihapus.'
+      message: 'Usulan sanksi berhasil dibatalkan.'
     });
   } catch (error) {
     console.error('Fasil Monitoring Sanksi DELETE Error:', error);
