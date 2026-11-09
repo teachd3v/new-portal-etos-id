@@ -18,19 +18,12 @@ export default function FasilPenilaianRELIForm({ params }) {
   
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState([]);
-  const [katalogSanksi, setKatalogSanksi] = useState([]);
   const [etoser, setEtoser] = useState(null);
   const [activePeriod, setActivePeriod] = useState(null);
   const [answers, setAnswers] = useState({});
   const [activeTab, setActiveTab] = useState('Value Resilience');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-
-  // Sanksi states
-  const [reportSanksi, setReportSanksi] = useState(false);
-  const [selectedKategori, setSelectedKategori] = useState('');
-  const [selectedPelanggaranId, setSelectedPelanggaranId] = useState('');
-  const [sanksiKeterangan, setSanksiKeterangan] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,7 +37,6 @@ export default function FasilPenilaianRELIForm({ params }) {
           setQuestions(json.questions || []);
           setEtoser(json.etoser);
           setActivePeriod(json.activePeriod);
-          setKatalogSanksi(json.katalogSanksi || []);
 
           const initialAnswers = {};
           (json.questions || []).forEach(q => {
@@ -95,32 +87,15 @@ export default function FasilPenilaianRELIForm({ params }) {
       toast.error(`Masih ada ${totalQuestions - totalAnswered} pertanyaan yang belum dinilai.`);
       return;
     }
-
-    if (reportSanksi && !selectedPelanggaranId) {
-      toast.error('Silakan pilih detail pelanggaran yang sesuai.');
-      return;
-    }
     
     setSubmitting(true);
     try {
-      const selectedSanksi = reportSanksi 
-        ? katalogSanksi.find(s => s.id === selectedPelanggaranId) 
-        : null;
-
       const payload = {
         answers,
         periode_kode: activePeriod.kode_periode || 'T0',
         periode_id: activePeriod.id,
         tahun: activePeriod.tahun
       };
-
-      if (selectedSanksi) {
-        payload.sanksi = {
-          katalog_sanksi_id: selectedSanksi.id,
-          poin: selectedSanksi.poin,
-          keterangan: sanksiKeterangan
-        };
-      }
 
       const res = await fetch(`/api/fasil/penilaian-peer/${etoserId}`, {
         method: 'POST',
@@ -129,7 +104,7 @@ export default function FasilPenilaianRELIForm({ params }) {
       });
       const json = await res.json();
       if (json.success) {
-        toast.success(reportSanksi ? 'Penilaian RELI & Usulan Sanksi berhasil disimpan!' : 'Penilaian RELI berhasil disimpan!');
+        toast.success('Penilaian RELI berhasil disimpan!');
         router.push('/fasil/penilaian');
       } else {
         toast.error(json.error || 'Gagal menyimpan penilaian.');

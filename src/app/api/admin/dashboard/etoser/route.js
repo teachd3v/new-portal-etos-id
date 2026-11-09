@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
-import { users, reli_consolidated, reli_assessments, periode_penilaian, sanksi_user, katalog_sanksi } from '@/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { users, reli_consolidated, reli_assessments, periode_penilaian } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
 import { getAuthUser } from '@/lib/auth';
 
 export async function GET(req) {
@@ -51,29 +51,7 @@ export async function GET(req) {
     const selfFilledUserIds = new Set(activeSelfAssessments.map(a => a.user_id));
     const facilFilledUserIds = new Set(activeFacilAssessments.map(a => a.user_id));
 
-    // 4. Fetch Sanksi
-    const allSanksiUser = await db.select().from(sanksi_user);
-    const allKatalogSanksi = await db.select().from(katalog_sanksi);
-    const activeSanksi = allSanksiUser.filter(s => etoserIds.includes(s.user_id));
-    const etoserKenaSanksi = new Set(activeSanksi.map(s => s.user_id)).size;
-
-    const sanksiTable = activeSanksi.map(s => {
-      const etoserUser = allUsers.find(u => u.id === s.user_id);
-      const catalogItem = allKatalogSanksi.find(k => k.id === s.katalog_sanksi_id);
-      return {
-        id: s.id,
-        etoserId: s.user_id,
-        etoserName: etoserUser?.name || 'Etoser',
-        wilayah: etoserUser?.wilayah || '-',
-        angkatan: etoserUser?.angkatan || '-',
-        poin: s.poin,
-        keterangan: s.keterangan || '-',
-        pelanggaran: catalogItem?.detail_pelanggaran || 'Pelanggaran',
-        status: s.status
-      };
-    });
-
-    // 5. Build Detail Table
+    // 4. Build Detail Table
     const consolidatedMap = {};
     activeConsolidated.forEach(c => { consolidatedMap[c.user_id] = c; });
 
@@ -176,10 +154,8 @@ export async function GET(req) {
         totalEtoser: etosers.length,
         etoserMengisi: selfFilledUserIds.size,
         fasilMenilai: facilFilledUserIds.size,
-        etoserKenaSanksi,
         activePeriod
       },
-      sanksiTable,
       charts: {
         trendIpk,
         sebaranVariabel,

@@ -3,6 +3,7 @@ import EtoserTab from "@/components/admin/dashboard/EtoserTab";
 import FasilTab from "@/components/admin/dashboard/FasilTab";
 import MonitoringBulananEtoser from "@/components/admin/dashboard/MonitoringBulananEtoser";
 import MonitoringBulananFasil from "@/components/admin/dashboard/MonitoringBulananFasil";
+import MonitoringSanksiEtoser from "@/components/admin/dashboard/MonitoringSanksiEtoser";
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect } from 'react';
 import { ShieldCheck } from 'lucide-react';
@@ -69,6 +70,7 @@ function DashboardContent() {
       <div className="mt-8">
         {activeTab === 'etoser' && <EtoserTab />}
         {activeTab === 'etoser-bulanan' && <MonitoringBulananEtoser />}
+        {activeTab === 'sanksi' && <MonitoringSanksiEtoser />}
         {activeTab === 'fasil-bulanan' && <MonitoringBulananFasil />}
         {activeTab === 'fasil' && <FasilTab />}
       </div>

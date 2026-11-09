@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
-import { users, reli_instrumen, periode_penilaian, reli_assessments, reli_consolidated, katalog_sanksi, sanksi_user } from '@/db/schema';
+import { users, reli_instrumen, periode_penilaian, reli_assessments, reli_consolidated } from '@/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { getAuthUser } from '@/lib/auth';
 import { calculateAssessmentScores, consolidateReliScores, convertToFasilPOV } from '@/lib/reli';
-import crypto from 'crypto';
 
 
 export async function GET(req, { params }) {
@@ -66,9 +65,6 @@ export async function GET(req, { params }) {
       bar_level_3: convertToFasilPOV(q.bar_level_3),
       bar_level_4: convertToFasilPOV(q.bar_level_4),
     }));
-    
-    // 5. Fetch Katalog Sanksi
-    const katalogSanksi = await db.select().from(katalog_sanksi);
 
     let existingAnswers = null;
     if (existingSubmission && existingSubmission.raw_answers) {
@@ -89,8 +85,7 @@ export async function GET(req, { params }) {
       hasSelfAssessed,
       existingAnswers,
       existingScore: existingSubmission ? existingSubmission.overall_score : null,
-      questions: fasilQuestions,
-      katalogSanksi
+      questions: fasilQuestions
     });
 
 
@@ -109,7 +104,7 @@ export async function POST(req, { params }) {
     }
 
     const body = await req.json();
-    const { answers, periode_kode, periode_id, tahun, sanksi } = body;
+    const { answers, periode_kode, periode_id, tahun } = body;
 
     if (!answers || typeof answers !== 'object' || Object.keys(answers).length === 0) {
       return NextResponse.json({ error: 'Data penilaian belum lengkap' }, { status: 400 });
@@ -197,23 +192,6 @@ export async function POST(req, { params }) {
       await db.update(reli_consolidated).set(consolidatedValues).where(eq(reli_consolidated.id, consolidatedId));
     } else {
       await db.insert(reli_consolidated).values(consolidatedValues);
-    }
-
-    // 5. Insert Sanksi if reported
-    if (sanksi && sanksi.katalog_sanksi_id) {
-      const sanksiId = `SNK-${crypto.randomBytes(4).toString('hex')}`;
-      await db.insert(sanksi_user).values({
-        id: sanksiId,
-        user_id: etoserId,
-        fasil_id: user.id,
-        katalog_sanksi_id: sanksi.katalog_sanksi_id,
-        poin: sanksi.poin || 0,
-        keterangan: sanksi.keterangan || null,
-        status: 'PENDING',
-        period_month: kodePeriode,
-        period_year: tahunStr,
-        timestamp: new Date()
-      });
     }
 
     return NextResponse.json({

@@ -16,7 +16,7 @@ export async function GET(req) {
       { type: 'Menu', label: 'Dashboard Monitoring', url: '/admin' },
       { type: 'Menu', label: 'Monitoring Etoser', url: '/admin?tab=etoser' },
       { type: 'Menu', label: 'Monitoring Fasilitator', url: '/admin?tab=fasil' },
-      { type: 'Menu', label: 'Monitoring Sanksi Pembinaan', url: '/admin/dashboard/sanksi' },
+      { type: 'Menu', label: 'Daftar Sanksi & Credit Point Etoser', url: '/admin?tab=sanksi' },
       { type: 'Menu', label: 'Manajemen Pengguna (User)', url: '/admin/users' },
       { type: 'Menu', label: 'Manajemen Agenda & Kegiatan', url: '/admin/agendas?tab=agenda' },
       { type: 'Menu', label: 'Presensi Kehadiran', url: '/admin/agendas?tab=presensi' },

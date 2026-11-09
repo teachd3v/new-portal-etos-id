@@ -104,6 +104,7 @@ function HeaderContent({ handleLogout }) {
                 >
                   <option value="/admin?tab=etoser">RELI Etoser</option>
                   <option value="/admin?tab=etoser-bulanan">Monitoring Etoser</option>
+                  <option value="/admin?tab=sanksi">Daftar Sanksi</option>
                   <option value="/admin?tab=fasil-bulanan">Monitoring Fasil</option>
                   <option value="/admin?tab=fasil">Leaderboard Fasil</option>
                 </select>
@@ -194,6 +195,7 @@ function HeaderContent({ handleLogout }) {
               <>
                 <Link href="/admin?tab=etoser" scroll={false} className={tab === 'etoser' ? activeClass : inactiveClass}>RELI Etoser</Link>
                 <Link href="/admin?tab=etoser-bulanan" scroll={false} className={tab === 'etoser-bulanan' ? activeClass : inactiveClass}>Monitoring Etoser</Link>
+                <Link href="/admin?tab=sanksi" scroll={false} className={tab === 'sanksi' ? activeClass : inactiveClass}>Daftar Sanksi</Link>
                 <Link href="/admin?tab=fasil-bulanan" scroll={false} className={tab === 'fasil-bulanan' ? activeClass : inactiveClass}>Monitoring Fasil</Link>
                 <Link href="/admin?tab=fasil" scroll={false} className={tab === 'fasil' ? activeClass : inactiveClass}>Leaderboard Fasil</Link>
               </>

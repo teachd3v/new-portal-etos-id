@@ -19,9 +19,6 @@ export default function EtoserTab() {
   const [wilayah, setWilayah] = useState('all');
   const [angkatan, setAngkatan] = useState('all');
   
-  // Modal state
-  const [showSanksiModal, setShowSanksiModal] = useState(false);
-  
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
@@ -41,16 +38,6 @@ export default function EtoserTab() {
     }
     fetchData();
   }, [wilayah, angkatan]);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        setShowSanksiModal(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -101,15 +88,17 @@ export default function EtoserTab() {
       </div>
 
       {/* Top Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        <StatCard 
-          title="Total Etoser" 
-          value={data?.stats?.totalEtoser || 0} 
-          unit="Etoser" 
-          icon={Users} 
-          color="teal" 
-          loading={loading} 
-        />
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+        <div className="col-span-2 lg:col-span-1">
+          <StatCard 
+            title="Total Etoser" 
+            value={data?.stats?.totalEtoser || 0} 
+            unit="Etoser" 
+            icon={Users} 
+            color="teal" 
+            loading={loading} 
+          />
+        </div>
         <StatCard 
           title="Asesmen Mandiri" 
           value={data?.stats?.etoserMengisi || 0} 
@@ -125,15 +114,6 @@ export default function EtoserTab() {
           icon={UserCheck} 
           color="indigo" 
           loading={loading} 
-        />
-        <StatCard 
-          title="Sanksi Etoser" 
-          value={data?.stats?.etoserKenaSanksi || 0} 
-          unit="Pelanggaran" 
-          icon={Eye} 
-          color="rose" 
-          loading={loading} 
-          onClick={() => setShowSanksiModal(true)} 
         />
       </div>
 
@@ -349,77 +329,6 @@ export default function EtoserTab() {
           </table>
         </div>
       </div>
-
-      {/* Sanksi Modal */}
-      {showSanksiModal && (
-        <div onClick={() => setShowSanksiModal(false)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
-          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-[2rem] shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col cursor-default">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-rose-50/50">
-              <div className="flex items-center gap-3">
-                <div className="bg-rose-100 p-2 rounded-xl text-rose-600">
-                  <AlertTriangle className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-black text-rose-950">Daftar Sanksi Etoser</h2>
-                  <p className="text-rose-800/70 text-sm font-medium">Detail usulan pelanggaran & sanksi.</p>
-                </div>
-              </div>
-              <button onClick={() => setShowSanksiModal(false)} className="p-2 hover:bg-rose-100 rounded-full text-rose-400 hover:text-rose-600 transition-colors">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto flex-1">
-              <div className="overflow-x-auto rounded-xl border border-slate-200">
-                <table className="w-full text-left border-collapse whitespace-nowrap">
-                  <thead className="bg-slate-50 text-slate-700 text-sm">
-                    <tr>
-                      <th className="p-4 font-semibold">Nama & ID</th>
-                      <th className="p-4 font-semibold">Wilayah / Angkatan</th>
-                      <th className="p-4 font-semibold">Poin</th>
-                      <th className="p-4 font-semibold">Keterangan</th>
-                      <th className="p-4 font-semibold">Daftar Pelanggaran</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data?.sanksiTable && data.sanksiTable.length > 0 ? (
-                      data.sanksiTable.map((s, idx) => (
-                        <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                          <td className="p-4">
-                            <div className="font-bold text-slate-800">{s.etoserName}</div>
-                            <div className="text-xs font-mono text-slate-500">{s.etoserId}</div>
-                          </td>
-                          <td className="p-4 text-sm text-slate-600 font-medium">
-                            {s.wilayah} • Angkatan {s.angkatan}
-                          </td>
-                          <td className="p-4">
-                            <span className="font-black text-rose-600 bg-rose-50 px-3 py-1 rounded-lg">
-                              {s.poin} Poin
-                            </span>
-                          </td>
-                          <td className="p-4 text-sm text-slate-600 max-w-[200px] truncate" title={s.keterangan}>
-                            {s.keterangan}
-                          </td>
-                          <td className="p-4 text-sm text-slate-800 font-semibold">
-                            {s.pelanggaran}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="5" className="p-12 text-center text-slate-500">
-                          <AlertTriangle className="w-12 h-12 text-rose-200 mx-auto mb-3" />
-                          <p className="font-medium">Belum ada data sanksi tercatat.</p>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );

@@ -1,0 +1,915 @@
+"use client";
+import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  Search,
+  Download,
+  AlertTriangle,
+  ShieldAlert,
+  Loader2,
+  Users,
+  Calendar,
+  Trash2,
+  Plus,
+  X,
+  FileWarning,
+  Wallet
+} from 'lucide-react';
+import StatCard from './StatCard';
+import ConfirmModal from '@/components/ui/ConfirmModal';
+import { toast } from 'react-hot-toast';
+
+const MONTH_OPTIONS = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
+
+const YEAR_OPTIONS = ['2024', '2025', '2026', '2027'];
+
+export default function MonitoringSanksiEtoser() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const now = new Date();
+  const [bulan, setBulan] = useState(MONTH_OPTIONS[now.getMonth()]);
+  const [tahun, setTahun] = useState(now.getFullYear().toString());
+  const [wilayah, setWilayah] = useState('all');
+  const [angkatan, setAngkatan] = useState('all');
+  const [kategori, setKategori] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState('rekap'); // 'rekap' (per Etoser for Finance) | 'rincian' (per violation)
+
+  // Add Sanksi Modal (Admin)
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [formUserId, setFormUserId] = useState('');
+  const [formKategori, setFormKategori] = useState('');
+  const [formKatalogId, setFormKatalogId] = useState('');
+  const [formBulan, setFormBulan] = useState(MONTH_OPTIONS[now.getMonth()]);
+  const [formTahun, setFormTahun] = useState(now.getFullYear().toString());
+  const [formKeterangan, setFormKeterangan] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  // Confirm Delete Modal
+  const [confirmConfig, setConfirmConfig] = useState(null);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const qs = new URLSearchParams({
+        bulan,
+        tahun,
+        wilayah,
+        angkatan,
+        kategori
+      }).toString();
+      const res = await fetch(`/api/admin/monitoring/sanksi?${qs}`);
+      if (res.ok) {
+        const json = await res.json();
+        setData(json);
+      } else {
+        toast.error("Gagal memuat daftar sanksi Etoser");
+      }
+    } catch (err) {
+      toast.error("Terjadi kesalahan jaringan");
+    } finally {
+      setLoading(false);
+    }
+  }, [bulan, tahun, wilayah, angkatan, kategori]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const katalogSanksi = data?.katalogSanksi || [];
+  const kategoriOptions = [...new Set(katalogSanksi.map(k => k.kategori).filter(Boolean))];
+  const filteredModalKatalog = formKategori
+    ? katalogSanksi.filter(k => k.kategori === formKategori)
+    : katalogSanksi;
+  const chosenCatalogItem = katalogSanksi.find(k => k.id === formKatalogId) || null;
+
+  const filteredSummary = (data?.summaryByEtoser || []).filter(row =>
+    row.etoserName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    row.etoserId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    row.pelanggaranRingkas.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredCases = (data?.cases || []).filter(row =>
+    row.etoserName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    row.etoserId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    row.detailPelanggaran.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleExportCSV = () => {
+    const rowsToExport = viewMode === 'rekap' ? filteredSummary : filteredCases;
+    if (rowsToExport.length === 0) {
+      return toast.error("Tidak ada data sanksi untuk diekspor");
+    }
+
+    const csvRows = [];
+
+    if (viewMode === 'rekap') {
+      const headers = [
+        "ID Etoser",
+        "Nama Etoser",
+        "Wilayah",
+        "Angkatan",
+        "Periode Bulan",
+        "Periode Tahun",
+        "Jumlah Pelanggaran",
+        "Total Poin Sanksi",
+        "Potongan Uang Saku (Credit Perform)",
+        "Rincian Daftar Pelanggaran"
+      ];
+      csvRows.push(headers.join(","));
+
+      filteredSummary.forEach(row => {
+        const values = [
+          `"${row.etoserId}"`,
+          `"${row.etoserName.replace(/"/g, '""')}"`,
+          `"${row.wilayah}"`,
+          `"${row.angkatan}"`,
+          `"${row.periodMonth}"`,
+          `"${row.periodYear}"`,
+          row.totalKasus,
+          row.totalPoin,
+          `"${row.totalCreditDeduction}"`,
+          `"${row.pelanggaranRingkas.replace(/"/g, '""')}"`
+        ];
+        csvRows.push(values.join(","));
+      });
+    } else {
+      const headers = [
+        "ID Sanksi",
+        "ID Etoser",
+        "Nama Etoser",
+        "Wilayah",
+        "Angkatan",
+        "Periode Bulan",
+        "Periode Tahun",
+        "Kategori Pelanggaran",
+        "Detail Pelanggaran",
+        "Masa Perbaikan",
+        "Poin Sanksi",
+        "Potongan Uang Saku (Credit Perform)",
+        "Keterangan / Kronologi",
+        "Pelapor (Fasilitator)"
+      ];
+      csvRows.push(headers.join(","));
+
+      filteredCases.forEach(row => {
+        const values = [
+          `"${row.id}"`,
+          `"${row.etoserId}"`,
+          `"${row.etoserName.replace(/"/g, '""')}"`,
+          `"${row.wilayah}"`,
+          `"${row.angkatan}"`,
+          `"${row.periodMonth}"`,
+          `"${row.periodYear}"`,
+          `"${row.kategori}"`,
+          `"${row.detailPelanggaran.replace(/"/g, '""')}"`,
+          `"${row.masaPerbaikan}"`,
+          row.poin,
+          `"${row.creditPerform}"`,
+          `"${(row.keterangan || '-').replace(/"/g, '""')}"`,
+          `"${(row.fasilName || '-').replace(/"/g, '""')}"`
+        ];
+        csvRows.push(values.join(","));
+      });
+    }
+
+    const csvContent = "\uFEFF" + csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const periodSlug = `${bulan === 'all' ? 'semua-bulan' : bulan.toLowerCase()}_${tahun}`;
+    link.setAttribute("href", url);
+    link.setAttribute("download", `daftar_sanksi_credit_etoser_${viewMode}_${periodSlug}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast.success("Berhasil mengekspor laporan sanksi & credit point ke CSV!");
+  };
+
+  const handleAddSubmit = async (e) => {
+    e.preventDefault();
+    if (!formUserId || !formKatalogId) {
+      return toast.error("Pilih Etoser dan jenis pelanggaran terlebih dahulu");
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/admin/monitoring/sanksi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: formUserId,
+          katalog_sanksi_id: formKatalogId,
+          keterangan: formKeterangan,
+          period_month: formBulan,
+          period_year: formTahun
+        })
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        toast.success("Sanksi Etoser berhasil ditambahkan!");
+        setIsAddModalOpen(false);
+        setFormUserId('');
+        setFormKatalogId('');
+        setFormKeterangan('');
+        fetchData();
+      } else {
+        toast.error(json.error || "Gagal menyimpan sanksi");
+      }
+    } catch (err) {
+      toast.error("Terjadi kesalahan jaringan");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteCase = (id, etoserName) => {
+    setConfirmConfig({
+      title: "Hapus Catatan Sanksi",
+      message: `Yakin ingin menghapus catatan pelanggaran untuk ${etoserName}? Poin dan potongan credit akan otomatis diperbarui.`,
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/admin/monitoring/sanksi?id=${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+          });
+          if (res.ok) {
+            toast.success("Catatan sanksi berhasil dihapus");
+            fetchData();
+          } else {
+            toast.error("Gagal menghapus catatan sanksi");
+          }
+        } catch (err) {
+          toast.error("Terjadi kesalahan jaringan");
+        }
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
+      
+      {/* Filters Bar */}
+      <div className="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl p-2.5 md:p-3.5 shadow-sm">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-center w-full">
+          {/* Month & Year Select */}
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1.5 md:py-2 rounded-xl w-full">
+            <Calendar className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+            <select 
+              value={bulan} 
+              onChange={(e) => setBulan(e.target.value)} 
+              className="bg-transparent text-[11px] md:text-xs font-bold text-slate-800 focus:outline-none cursor-pointer flex-1 min-w-0"
+            >
+              <option value="all">Semua Bulan</option>
+              {MONTH_OPTIONS.map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            <select 
+              value={tahun} 
+              onChange={(e) => setTahun(e.target.value)} 
+              className="bg-transparent text-[11px] md:text-xs font-bold text-slate-800 focus:outline-none cursor-pointer border-l border-slate-200 pl-1.5 shrink-0"
+            >
+              <option value="all">Semua</option>
+              {YEAR_OPTIONS.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Wilayah Select */}
+          <select 
+            value={wilayah} 
+            onChange={(e) => setWilayah(e.target.value)} 
+            className="w-full py-1.5 md:py-2 px-2.5 md:px-3 bg-white border border-slate-200 rounded-xl text-[11px] md:text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 text-slate-800 font-bold"
+          >
+            <option value="all">Semua Wilayah</option>
+            <option value="Aceh">Aceh</option>
+            <option value="Padang">Padang</option>
+            <option value="Bogor">Bogor</option>
+            <option value="Jakarta">Jakarta</option>
+            <option value="Makassar">Makassar</option>
+          </select>
+
+          {/* Angkatan Select */}
+          <select 
+            value={angkatan} 
+            onChange={(e) => setAngkatan(e.target.value)} 
+            className="w-full py-1.5 md:py-2 px-2.5 md:px-3 bg-white border border-slate-200 rounded-xl text-[11px] md:text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 text-slate-800 font-bold"
+          >
+            <option value="all">Semua Angkatan</option>
+            <option value="2023">Angkatan 2023</option>
+            <option value="2024">Angkatan 2024</option>
+            <option value="2025">Angkatan 2025</option>
+            <option value="2026">Angkatan 2026</option>
+          </select>
+
+          {/* Kategori Pelanggaran Filter */}
+          <select 
+            value={kategori} 
+            onChange={(e) => setKategori(e.target.value)} 
+            className="w-full py-1.5 md:py-2 px-2.5 md:px-3 bg-white border border-slate-200 rounded-xl text-[11px] md:text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 text-slate-800 font-bold"
+          >
+            <option value="all">Semua Kategori</option>
+            {kategoriOptions.map(k => (
+              <option key={k} value={k}>{k}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Top Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+        <StatCard 
+          title="Etoser Kena Sanksi" 
+          value={data?.stats?.etoserKenaSanksi || 0} 
+          unit="Etoser" 
+          icon={Users} 
+          color="rose" 
+          loading={loading} 
+        />
+        <StatCard 
+          title="Total Pelanggaran" 
+          value={data?.stats?.totalKasus || 0} 
+          unit="Kasus" 
+          icon={FileWarning} 
+          color="amber" 
+          loading={loading} 
+        />
+        <StatCard 
+          title="Akumulasi Poin" 
+          value={data?.stats?.totalPoin || 0} 
+          unit="Poin" 
+          icon={AlertTriangle} 
+          color="orange" 
+          loading={loading} 
+        />
+        <StatCard 
+          title="Potongan ≥30% / DO" 
+          value={data?.stats?.kasusBeratAtauDO || 0} 
+          unit="Etoser" 
+          icon={Wallet} 
+          color="purple" 
+          loading={loading} 
+        />
+      </div>
+
+      {/* Main Content Card */}
+      <div className="bg-white/60 backdrop-blur-md border border-white/80 rounded-2xl md:rounded-[2.5rem] p-4 md:p-8 shadow-sm space-y-5">
+        
+        {/* Header & Action Controls */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <div>
+            <h3 className="text-base md:text-xl font-black text-slate-900">
+              Daftar Penerima Sanksi & Potongan Credit Point
+            </h3>
+            <p className="text-[11px] md:text-xs text-slate-500 font-medium mt-0.5">
+              Rekapitulasi poin pelanggaran bulanan sebagai dasar pemotongan uang saku Etoser oleh Keuangan ({bulan === 'all' ? 'Semua Bulan' : bulan} {tahun === 'all' ? '' : tahun}).
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
+            {/* View Mode Toggle */}
+            <div className="bg-slate-100 p-1 rounded-xl flex items-center text-[11px] md:text-xs font-bold w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setViewMode('rekap')}
+                className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'rekap'
+                    ? 'bg-white text-teal-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Rekap Keuangan
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('rincian')}
+                className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'rincian'
+                    ? 'bg-white text-teal-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Rincian Kasus
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setFormBulan(bulan === 'all' ? MONTH_OPTIONS[now.getMonth()] : bulan);
+                setFormTahun(tahun === 'all' ? now.getFullYear().toString() : tahun);
+                setIsAddModalOpen(true);
+              }}
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 bg-white hover:bg-teal-50 text-teal-800 border border-teal-200 px-3.5 py-2 rounded-xl font-bold text-xs transition-all shadow-xs active:scale-95 cursor-pointer"
+            >
+              <Plus className="w-4 h-4 text-teal-700" /> Input Sanksi
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 bg-teal-700 hover:bg-teal-800 text-white px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md shadow-teal-900/10 active:scale-95 cursor-pointer"
+            >
+              <Download className="w-4 h-4" /> Export CSV
+            </button>
+          </div>
+        </div>
+
+        {/* Search Input */}
+        <div className="relative w-full md:max-w-md">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input 
+            type="text" 
+            placeholder="Cari nama Etoser, ID, atau jenis pelanggaran..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-teal-500/20 font-medium"
+          />
+        </div>
+
+        {/* VIEW MODE 1: REKAP KEUANGAN PER ETOSER */}
+        {viewMode === 'rekap' ? (
+          <>
+            {/* Mobile Card List View (< md) */}
+            <div className="md:hidden space-y-3">
+              {loading ? (
+                <div className="p-8 text-center text-teal-600"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
+              ) : filteredSummary.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-xs font-medium bg-white/70 rounded-2xl border border-slate-100">
+                  Belum ada data sanksi Etoser pada periode dan filter ini.
+                </div>
+              ) : (
+                filteredSummary.map((row, idx) => {
+                  const isHeavy = row.totalCreditDeduction === 'DO' || row.totalPoin >= 30;
+                  return (
+                    <div key={idx} className="bg-white/95 border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-sm leading-snug">{row.etoserName}</h4>
+                          <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+                            {row.etoserId} • {row.wilayah} ({row.angkatan})
+                          </p>
+                          <span className="inline-block text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md mt-1">
+                            Periode: {row.periodMonth} {row.periodYear}
+                          </span>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-black border ${
+                            isHeavy
+                              ? 'bg-rose-100 text-rose-700 border-rose-200'
+                              : 'bg-amber-100 text-amber-800 border-amber-200'
+                          }`}>
+                            Potongan: {row.totalCreditDeduction}
+                          </span>
+                          <p className="text-[10px] font-bold text-rose-600 mt-1">
+                            Total: {row.totalPoin} Poin ({row.totalKasus} kasus)
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                          Daftar Pelanggaran:
+                        </span>
+                        {row.cases.map((c) => (
+                          <div key={c.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 flex items-start justify-between gap-2 text-xs">
+                            <div className="space-y-0.5 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                                  {c.kategori}
+                                </span>
+                                <span className="text-[10px] font-black text-rose-600">
+                                  {c.poin} Poin ({c.creditPerform})
+                                </span>
+                                <span className="text-[10px] text-slate-400">
+                                  • Masa: {c.masaPerbaikan}
+                                </span>
+                              </div>
+                              <p className="text-slate-800 font-semibold leading-snug">{c.detailPelanggaran}</p>
+                              {c.keterangan && c.keterangan !== '-' && (
+                                <p className="text-[11px] text-slate-500 italic">"{c.keterangan}"</p>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCase(c.id, row.etoserName)}
+                              className="p-1.5 text-rose-500 hover:bg-rose-100 rounded-lg shrink-0 cursor-pointer"
+                              title="Hapus"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Desktop Table View (>= md) */}
+            <div className="hidden md:block overflow-x-auto rounded-2xl border border-slate-100">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead className="bg-slate-50 text-slate-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                  <tr>
+                    <th className="p-4 font-black">Etoser & ID</th>
+                    <th className="p-4 font-black">Wilayah / Angkatan</th>
+                    <th className="p-4 font-black text-center">Periode</th>
+                    <th className="p-4 font-black text-center">Total Poin</th>
+                    <th className="p-4 font-black text-center">Potongan Credit (Uang Saku)</th>
+                    <th className="p-4 font-black">Rincian Pelanggaran & Masa Perbaikan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="p-10 text-center text-teal-600">
+                        <Loader2 className="w-6 h-6 animate-spin mx-auto" />
+                      </td>
+                    </tr>
+                  ) : filteredSummary.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-10 text-center text-slate-400 font-medium">
+                        Tidak ada data penerima sanksi untuk filter periode ini.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredSummary.map((row, idx) => {
+                      const isHeavy = row.totalCreditDeduction === 'DO' || row.totalPoin >= 30;
+                      return (
+                        <tr key={idx} className="border-b border-slate-100 hover:bg-teal-50/30 transition-colors align-top">
+                          <td className="p-4 whitespace-nowrap">
+                            <div className="font-bold text-slate-900 text-sm">{row.etoserName}</div>
+                            <div className="text-[11px] text-slate-400 font-mono mt-0.5">{row.etoserId}</div>
+                          </td>
+                          <td className="p-4 font-semibold text-slate-600 whitespace-nowrap">
+                            {row.wilayah} <span className="text-slate-300 mx-1">•</span> {row.angkatan}
+                          </td>
+                          <td className="p-4 text-center whitespace-nowrap">
+                            <span className="font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-lg">
+                              {row.periodMonth} {row.periodYear}
+                            </span>
+                          </td>
+                          <td className="p-4 text-center whitespace-nowrap">
+                            <span className={`inline-flex items-center justify-center px-3 py-1 rounded-xl font-black text-sm ${
+                              isHeavy ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {row.totalPoin} Poin
+                            </span>
+                            <span className="block text-[10px] text-slate-400 font-semibold mt-0.5">
+                              {row.totalKasus} Pelanggaran
+                            </span>
+                          </td>
+                          <td className="p-4 text-center whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black border ${
+                              isHeavy
+                                ? 'bg-rose-50 border-rose-200 text-rose-700'
+                                : 'bg-amber-50 border-amber-200 text-amber-800'
+                            }`}>
+                              <Wallet className="w-3.5 h-3.5" />
+                              {row.totalCreditDeduction === 'DO' ? 'Rekomendasi DO' : `Potong ${row.totalCreditDeduction}`}
+                            </span>
+                          </td>
+                          <td className="p-4 min-w-[340px]">
+                            <div className="space-y-2">
+                              {row.cases.map((c) => (
+                                <div key={c.id} className="p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-start justify-between gap-3 shadow-2xs">
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                                        {c.kategori}
+                                      </span>
+                                      <span className="text-[10px] font-black text-rose-700">
+                                        {c.poin} Poin • Credit: {c.creditPerform}
+                                      </span>
+                                      <span className="text-[10px] font-semibold text-slate-500">
+                                        • Masa Perbaikan: {c.masaPerbaikan}
+                                      </span>
+                                      <span className="text-[10px] text-slate-400">
+                                        • Pelapor: {c.fasilName}
+                                      </span>
+                                    </div>
+                                    <p className="font-bold text-slate-800 text-xs leading-snug">{c.detailPelanggaran}</p>
+                                    {c.keterangan && c.keterangan !== '-' && (
+                                      <p className="text-[11px] text-slate-500 italic">Catatan: "{c.keterangan}"</p>
+                                    )}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteCase(c.id, row.etoserName)}
+                                    className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors shrink-0 cursor-pointer"
+                                    title="Hapus kasus ini"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          /* VIEW MODE 2: RINCIAN PER KASUS PELANGGARAN */
+          <>
+            {/* Mobile Card View (< md) */}
+            <div className="md:hidden space-y-3">
+              {loading ? (
+                <div className="p-8 text-center text-teal-600"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
+              ) : filteredCases.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-xs font-medium bg-white/70 rounded-2xl border border-slate-100">
+                  Tidak ada rincian kasus pelanggaran ditemukan.
+                </div>
+              ) : (
+                filteredCases.map((c) => (
+                  <div key={c.id} className="bg-white/95 border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-bold text-slate-900 text-sm">{c.etoserName}</h4>
+                        <p className="text-[11px] text-slate-500 font-mono">{c.etoserId} • {c.wilayah} ({c.angkatan})</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCase(c.id, c.etoserName)}
+                        className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200">
+                        {c.periodMonth} {c.periodYear}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                        {c.kategori}
+                      </span>
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded bg-amber-100 text-amber-900">
+                        {c.poin} Poin • Potongan: {c.creditPerform}
+                      </span>
+                    </div>
+                    <p className="text-xs font-bold text-slate-800">{c.detailPelanggaran}</p>
+                    <div className="text-[11px] text-slate-500 flex flex-wrap gap-2 pt-1 border-t border-slate-100">
+                      <span>Masa Perbaikan: <strong>{c.masaPerbaikan}</strong></span>
+                      <span>•</span>
+                      <span>Pelapor: <strong>{c.fasilName}</strong></span>
+                    </div>
+                    {c.keterangan && c.keterangan !== '-' && (
+                      <p className="text-[11px] text-slate-600 italic bg-slate-50 p-2 rounded-lg">"{c.keterangan}"</p>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Desktop Table View (>= md) */}
+            <div className="hidden md:block overflow-x-auto rounded-2xl border border-slate-100">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead className="bg-slate-50 text-slate-700 text-xs uppercase tracking-wider whitespace-nowrap">
+                  <tr>
+                    <th className="p-4 font-black">Etoser & ID</th>
+                    <th className="p-4 font-black">Wilayah / Angkatan</th>
+                    <th className="p-4 font-black">Periode</th>
+                    <th className="p-4 font-black">Kategori & Pelanggaran</th>
+                    <th className="p-4 font-black text-center">Poin</th>
+                    <th className="p-4 font-black text-center">Credit Perform</th>
+                    <th className="p-4 font-black">Masa Perbaikan</th>
+                    <th className="p-4 font-black">Keterangan / Pelapor</th>
+                    <th className="p-4 font-black text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={9} className="p-10 text-center text-teal-600"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></td></tr>
+                  ) : filteredCases.length === 0 ? (
+                    <tr><td colSpan={9} className="p-10 text-center text-slate-400 font-medium">Tidak ada kasus pelanggaran ditemukan.</td></tr>
+                  ) : (
+                    filteredCases.map((c) => (
+                      <tr key={c.id} className="border-b border-slate-100 hover:bg-teal-50/30 transition-colors">
+                        <td className="p-4 whitespace-nowrap">
+                          <div className="font-bold text-slate-900 text-sm">{c.etoserName}</div>
+                          <div className="text-[11px] text-slate-400 font-mono">{c.etoserId}</div>
+                        </td>
+                        <td className="p-4 font-semibold text-slate-600 whitespace-nowrap">
+                          {c.wilayah} • {c.angkatan}
+                        </td>
+                        <td className="p-4 whitespace-nowrap font-bold text-teal-800">
+                          {c.periodMonth} {c.periodYear}
+                        </td>
+                        <td className="p-4 max-w-sm">
+                          <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 mb-1">
+                            {c.kategori}
+                          </span>
+                          <p className="font-bold text-slate-800 leading-snug">{c.detailPelanggaran}</p>
+                        </td>
+                        <td className="p-4 text-center whitespace-nowrap">
+                          <span className="font-black text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg">{c.poin}</span>
+                        </td>
+                        <td className="p-4 text-center whitespace-nowrap">
+                          <span className="font-black text-amber-900 bg-amber-100 px-2.5 py-1 rounded-lg">{c.creditPerform}</span>
+                        </td>
+                        <td className="p-4 whitespace-nowrap text-slate-600 font-medium">
+                          {c.masaPerbaikan}
+                        </td>
+                        <td className="p-4 max-w-xs">
+                          <p className="text-slate-700 truncate" title={c.keterangan}>{c.keterangan}</p>
+                          <span className="text-[10px] text-slate-400 font-semibold">Oleh: {c.fasilName}</span>
+                        </td>
+                        <td className="p-4 text-right whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCase(c.id, c.etoserName)}
+                            className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                            title="Hapus"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Modal Tambah Sanksi oleh Admin */}
+      {isAddModalOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          onClick={() => setIsAddModalOpen(false)}
+          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-t-3xl sm:rounded-3xl max-w-xl w-full max-h-[90dvh] flex flex-col shadow-2xl border border-slate-100 overflow-hidden cursor-default"
+          >
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-teal-700 to-teal-900 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-white/15">
+                  <ShieldAlert className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black">Input Sanksi Etoser</h3>
+                  <p className="text-xs text-teal-100">Catat pelanggaran & pemotongan credit point bulanan</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddSubmit} className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Pilih Etoser *</label>
+                <select
+                  required
+                  value={formUserId}
+                  onChange={(e) => setFormUserId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                >
+                  <option value="">-- Pilih Etoser --</option>
+                  {(data?.etoserOptions || []).map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.id} • {u.wilayah} • {u.angkatan})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Periode Bulan *</label>
+                  <select
+                    value={formBulan}
+                    onChange={(e) => setFormBulan(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  >
+                    {MONTH_OPTIONS.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Periode Tahun *</label>
+                  <select
+                    value={formTahun}
+                    onChange={(e) => setFormTahun(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  >
+                    {YEAR_OPTIONS.map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Filter Kategori</label>
+                  <select
+                    value={formKategori}
+                    onChange={(e) => {
+                      setFormKategori(e.target.value);
+                      setFormKatalogId('');
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  >
+                    <option value="">Semua Kategori</option>
+                    {kategoriOptions.map((kat) => (
+                      <option key={kat} value={kat}>{kat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Jenis Pelanggaran *</label>
+                  <select
+                    required
+                    value={formKatalogId}
+                    onChange={(e) => setFormKatalogId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  >
+                    <option value="">-- Pilih Pelanggaran --</option>
+                    {filteredModalKatalog.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        [{item.poin} Poin | {item.credit_perform}] {item.detail_pelanggaran}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {chosenCatalogItem && (
+                <div className="p-3.5 rounded-2xl bg-rose-50/80 border border-rose-200 text-xs space-y-1">
+                  <p className="font-bold text-rose-950">{chosenCatalogItem.detail_pelanggaran}</p>
+                  <div className="flex flex-wrap gap-2 text-[11px] font-bold text-rose-800 pt-1">
+                    <span>Poin: <strong>{chosenCatalogItem.poin}</strong></span>
+                    <span>•</span>
+                    <span>Potongan Credit: <strong>{chosenCatalogItem.credit_perform}</strong></span>
+                    <span>•</span>
+                    <span>Masa Perbaikan: <strong>{chosenCatalogItem.masa_perbaikan}</strong></span>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Keterangan / Kronologi</label>
+                <textarea
+                  rows={2}
+                  value={formKeterangan}
+                  onChange={(e) => setFormKeterangan(e.target.value)}
+                  placeholder="Catatan tambahan..."
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs sm:text-sm hover:bg-slate-50 cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  Simpan Sanksi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      <ConfirmModal
+        isOpen={!!confirmConfig}
+        onClose={() => setConfirmConfig(null)}
+        title={confirmConfig?.title}
+        message={confirmConfig?.message}
+        onConfirm={confirmConfig?.onConfirm}
+      />
+
+    </div>
+  );
+}
