@@ -12,7 +12,6 @@ import {
   Trash2,
   Plus,
   X,
-  FileWarning,
   Wallet,
   CheckCircle2,
   Clock,
@@ -30,6 +29,37 @@ const MONTH_OPTIONS = [
 
 const YEAR_OPTIONS = ['2024', '2025', '2026', '2027'];
 
+function formatDateID(isoStr) {
+  if (!isoStr) return '-';
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return '-';
+  return d.toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+}
+
+function formatDateTimeID(isoStr) {
+  if (!isoStr) return '-';
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return '-';
+  return d.toLocaleString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function toYYYYMMDD(dateObj) {
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const d = String(dateObj.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export default function MonitoringSanksiEtoser() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -37,6 +67,8 @@ export default function MonitoringSanksiEtoser() {
   const now = new Date();
   const [bulan, setBulan] = useState(MONTH_OPTIONS[now.getMonth()]);
   const [tahun, setTahun] = useState(now.getFullYear().toString());
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [wilayah, setWilayah] = useState('all');
   const [angkatan, setAngkatan] = useState('all');
   const [kategori, setKategori] = useState('all');
@@ -55,20 +87,32 @@ export default function MonitoringSanksiEtoser() {
   const [submitting, setSubmitting] = useState(false);
   const [verifyingId, setVerifyingId] = useState(null);
 
-  // Confirm Delete Modal
+  // Export CSV Modal (Date Range & Format)
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
+  const [exportMode, setExportMode] = useState('rekap'); // 'rekap' | 'rincian'
+  const [exportStatusFilter, setExportStatusFilter] = useState('all'); // 'all' | 'APPROVED'
+  const [exporting, setExporting] = useState(false);
+
+  // Confirm Delete / Bulk Modal
   const [confirmConfig, setConfirmConfig] = useState(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const qs = new URLSearchParams({
+      const params = {
         bulan,
         tahun,
         wilayah,
         angkatan,
         kategori,
         status: statusFilter
-      }).toString();
+      };
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+
+      const qs = new URLSearchParams(params).toString();
       const res = await fetch(`/api/admin/monitoring/sanksi?${qs}`);
       if (res.ok) {
         const json = await res.json();
@@ -81,7 +125,7 @@ export default function MonitoringSanksiEtoser() {
     } finally {
       setLoading(false);
     }
-  }, [bulan, tahun, wilayah, angkatan, kategori, statusFilter]);
+  }, [bulan, tahun, startDate, endDate, wilayah, angkatan, kategori, statusFilter]);
 
   useEffect(() => {
     fetchData();
@@ -116,6 +160,41 @@ export default function MonitoringSanksiEtoser() {
     setFormKatalogId('');
     setFormKeterangan('');
     setIsAddModalOpen(true);
+  };
+
+  const openExportModal = () => {
+    setExportStartDate(startDate || '');
+    setExportEndDate(endDate || '');
+    setExportMode(viewMode);
+    setExportStatusFilter(statusFilter === 'APPROVED' ? 'APPROVED' : 'all');
+    setIsExportModalOpen(true);
+  };
+
+  const applyExportDatePreset = (preset) => {
+    const today = new Date();
+    if (preset === 'all') {
+      setExportStartDate('');
+      setExportEndDate('');
+    } else if (preset === 'today') {
+      const str = toYYYYMMDD(today);
+      setExportStartDate(str);
+      setExportEndDate(str);
+    } else if (preset === '7d') {
+      const past = new Date(today);
+      past.setDate(today.getDate() - 6);
+      setExportStartDate(toYYYYMMDD(past));
+      setExportEndDate(toYYYYMMDD(today));
+    } else if (preset === '30d') {
+      const past = new Date(today);
+      past.setDate(today.getDate() - 29);
+      setExportStartDate(toYYYYMMDD(past));
+      setExportEndDate(toYYYYMMDD(today));
+    } else if (preset === 'thisMonth') {
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      setExportStartDate(toYYYYMMDD(firstDay));
+      setExportEndDate(toYYYYMMDD(lastDay));
+    }
   };
 
   const handleVerifyCase = async (id, newStatus) => {
@@ -167,108 +246,167 @@ export default function MonitoringSanksiEtoser() {
     });
   };
 
-  const handleExportCSV = () => {
-    const rowsToExport = viewMode === 'rekap' ? filteredSummary : filteredCases;
-    if (rowsToExport.length === 0) {
-      return toast.error("Tidak ada data sanksi untuk diekspor");
+  const handleExecuteExportCSV = async (e) => {
+    if (e) e.preventDefault();
+    if (exportStartDate && exportEndDate && exportStartDate > exportEndDate) {
+      return toast.error("Tanggal mulai tidak boleh lebih besar dari tanggal akhir");
     }
 
-    const csvRows = [];
+    setExporting(true);
+    try {
+      const hasRange = Boolean(exportStartDate || exportEndDate);
+      const params = {
+        bulan: hasRange ? 'all' : bulan,
+        tahun: hasRange ? 'all' : tahun,
+        wilayah,
+        angkatan,
+        kategori,
+        status: exportStatusFilter
+      };
+      if (exportStartDate) params.startDate = exportStartDate;
+      if (exportEndDate) params.endDate = exportEndDate;
 
-    if (viewMode === 'rekap') {
-      const headers = [
-        "ID Etoser",
-        "Nama Etoser",
-        "Wilayah",
-        "Angkatan",
-        "Periode Bulan",
-        "Periode Tahun",
-        "Jumlah Pelanggaran",
-        "Total Poin Sanksi",
-        "Potongan Uang Saku (Credit Perform)",
-        "Status Verifikasi",
-        "Rincian Daftar Pelanggaran"
-      ];
-      csvRows.push(headers.join(","));
+      const qs = new URLSearchParams(params).toString();
+      const res = await fetch(`/api/admin/monitoring/sanksi?${qs}`);
+      if (!res.ok) {
+        toast.error("Gagal mengambil data sanksi untuk ekspor");
+        return;
+      }
+      const exportData = await res.json();
 
-      filteredSummary.forEach(row => {
-        const statusSummary = row.pendingCount > 0
-          ? `${row.approvedCount} Terverifikasi, ${row.pendingCount} Menunggu`
-          : 'Terverifikasi Semua';
-        const values = [
-          `"${row.etoserId}"`,
-          `"${row.etoserName.replace(/"/g, '""')}"`,
-          `"${row.wilayah}"`,
-          `"${row.angkatan}"`,
-          `"${row.periodMonth}"`,
-          `"${row.periodYear}"`,
-          row.totalKasus,
-          row.totalPoin,
-          `"${row.totalCreditDeduction}"`,
-          `"${statusSummary}"`,
-          `"${row.pelanggaranRingkas.replace(/"/g, '""')}"`
+      const summaryRows = (exportData?.summaryByEtoser || []).filter(row =>
+        row.etoserName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        row.etoserId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        row.pelanggaranRingkas.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+
+      const caseRows = (exportData?.cases || []).filter(row =>
+        row.etoserName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        row.etoserId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        row.detailPelanggaran.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+
+      const rowsToExport = exportMode === 'rekap' ? summaryRows : caseRows;
+      if (rowsToExport.length === 0) {
+        toast.error("Tidak ada data sanksi pada rentang tanggal / filter yang dipilih");
+        return;
+      }
+
+      const rangeLabel = hasRange
+        ? `${exportStartDate || 'Awal'} s/d ${exportEndDate || 'Sekarang'}`
+        : `${bulan === 'all' ? 'Semua Bulan' : bulan} ${tahun === 'all' ? 'Semua Tahun' : tahun}`;
+
+      const csvRows = [];
+
+      if (exportMode === 'rekap') {
+        const headers = [
+          "ID Etoser",
+          "Nama Etoser",
+          "Wilayah",
+          "Angkatan",
+          "Periode Bulan",
+          "Periode Tahun",
+          "Rentang Tanggal Export",
+          "Tanggal Input Terakhir",
+          "Jumlah Pelanggaran",
+          "Total Poin Sanksi",
+          "Potongan Uang Saku (Credit Perform)",
+          "Status Verifikasi",
+          "Rincian Daftar Pelanggaran"
         ];
-        csvRows.push(values.join(","));
-      });
-    } else {
-      const headers = [
-        "ID Sanksi",
-        "ID Etoser",
-        "Nama Etoser",
-        "Wilayah",
-        "Angkatan",
-        "Periode Bulan",
-        "Periode Tahun",
-        "Kategori Pelanggaran",
-        "Detail Pelanggaran",
-        "Masa Perbaikan",
-        "Poin Sanksi",
-        "Potongan Uang Saku (Credit Perform)",
-        "Status Verifikasi",
-        "Keterangan / Kronologi",
-        "Pelapor"
-      ];
-      csvRows.push(headers.join(","));
+        csvRows.push(headers.join(","));
 
-      filteredCases.forEach(row => {
-        const statusLabel = row.status === 'APPROVED'
-          ? 'Terverifikasi'
-          : row.status === 'REJECTED'
-            ? 'Ditolak'
-            : 'Menunggu Verifikasi';
-        const values = [
-          `"${row.id}"`,
-          `"${row.etoserId}"`,
-          `"${row.etoserName.replace(/"/g, '""')}"`,
-          `"${row.wilayah}"`,
-          `"${row.angkatan}"`,
-          `"${row.periodMonth}"`,
-          `"${row.periodYear}"`,
-          `"${row.kategori}"`,
-          `"${row.detailPelanggaran.replace(/"/g, '""')}"`,
-          `"${row.masaPerbaikan}"`,
-          row.poin,
-          `"${row.creditPerform}"`,
-          `"${statusLabel}"`,
-          `"${(row.keterangan || '-').replace(/"/g, '""')}"`,
-          `"${(row.fasilName || '-').replace(/"/g, '""')}"`
+        summaryRows.forEach(row => {
+          const statusSummary = row.pendingCount > 0
+            ? `${row.approvedCount} Terverifikasi, ${row.pendingCount} Menunggu`
+            : 'Terverifikasi Semua';
+          const values = [
+            `"${row.etoserId}"`,
+            `"${row.etoserName.replace(/"/g, '""')}"`,
+            `"${row.wilayah}"`,
+            `"${row.angkatan}"`,
+            `"${row.periodMonth}"`,
+            `"${row.periodYear}"`,
+            `"${rangeLabel}"`,
+            `"${formatDateTimeID(row.latestTimestamp)}"`,
+            row.totalKasus,
+            row.totalPoin,
+            `"${row.totalCreditDeduction}"`,
+            `"${statusSummary}"`,
+            `"${row.pelanggaranRingkas.replace(/"/g, '""')}"`
+          ];
+          csvRows.push(values.join(","));
+        });
+      } else {
+        const headers = [
+          "ID Sanksi",
+          "Tanggal Input",
+          "ID Etoser",
+          "Nama Etoser",
+          "Wilayah",
+          "Angkatan",
+          "Periode Bulan",
+          "Periode Tahun",
+          "Kategori Pelanggaran",
+          "Detail Pelanggaran",
+          "Masa Perbaikan",
+          "Poin Sanksi",
+          "Potongan Uang Saku (Credit Perform)",
+          "Status Verifikasi",
+          "Keterangan / Kronologi",
+          "Pelapor"
         ];
-        csvRows.push(values.join(","));
-      });
+        csvRows.push(headers.join(","));
+
+        caseRows.forEach(row => {
+          const statusLabel = row.status === 'APPROVED'
+            ? 'Terverifikasi'
+            : row.status === 'REJECTED'
+              ? 'Ditolak'
+              : 'Menunggu Verifikasi';
+          const values = [
+            `"${row.id}"`,
+            `"${formatDateTimeID(row.timestamp)}"`,
+            `"${row.etoserId}"`,
+            `"${row.etoserName.replace(/"/g, '""')}"`,
+            `"${row.wilayah}"`,
+            `"${row.angkatan}"`,
+            `"${row.periodMonth}"`,
+            `"${row.periodYear}"`,
+            `"${row.kategori}"`,
+            `"${row.detailPelanggaran.replace(/"/g, '""')}"`,
+            `"${row.masaPerbaikan}"`,
+            row.poin,
+            `"${row.creditPerform}"`,
+            `"${statusLabel}"`,
+            `"${(row.keterangan || '-').replace(/"/g, '""')}"`,
+            `"${(row.fasilName || '-').replace(/"/g, '""')}"`
+          ];
+          csvRows.push(values.join(","));
+        });
+      }
+
+      const csvContent = "\uFEFF" + csvRows.join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const periodSlug = hasRange
+        ? `${exportStartDate || 'awal'}_sd_${exportEndDate || 'akhir'}`
+        : `${bulan === 'all' ? 'semua-bulan' : bulan.toLowerCase()}_${tahun}`;
+      link.setAttribute("href", url);
+      link.setAttribute("download", `daftar_sanksi_credit_etoser_${exportMode}_${periodSlug}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+
+      toast.success(`Berhasil mengekspor ${rowsToExport.length} data sanksi ke CSV!`);
+      setIsExportModalOpen(false);
+    } catch (err) {
+      toast.error("Gagal mengekspor data ke CSV");
+    } finally {
+      setExporting(false);
     }
-
-    const csvContent = "\uFEFF" + csvRows.join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const periodSlug = `${bulan === 'all' ? 'semua-bulan' : bulan.toLowerCase()}_${tahun}`;
-    link.setAttribute("href", url);
-    link.setAttribute("download", `daftar_sanksi_credit_etoser_${viewMode}_${periodSlug}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    toast.success("Berhasil mengekspor laporan sanksi & credit point ke CSV!");
   };
 
   const handleAddSubmit = async (e) => {
@@ -351,18 +489,24 @@ export default function MonitoringSanksiEtoser() {
     );
   };
 
+  const hasActiveDateRange = Boolean(startDate || endDate);
+
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
       
       {/* Filters Bar */}
-      <div className="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl p-2.5 md:p-3.5 shadow-sm">
+      <div className="bg-white/80 backdrop-blur-md border border-slate-200/80 rounded-2xl p-2.5 md:p-3.5 shadow-sm space-y-2.5">
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-center w-full">
           {/* Month & Year Select */}
-          <div className="col-span-2 sm:col-span-1 flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1.5 md:py-2 rounded-xl w-full">
+          <div className={`col-span-2 sm:col-span-1 flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1.5 md:py-2 rounded-xl w-full ${hasActiveDateRange ? 'opacity-50' : ''}`}>
             <Calendar className="w-3.5 h-3.5 text-teal-600 shrink-0" />
             <select 
               value={bulan} 
-              onChange={(e) => setBulan(e.target.value)} 
+              onChange={(e) => {
+                setStartDate('');
+                setEndDate('');
+                setBulan(e.target.value);
+              }} 
               className="bg-transparent text-[11px] md:text-xs font-bold text-slate-800 focus:outline-none cursor-pointer flex-1 min-w-0"
             >
               <option value="all">Semua Bulan</option>
@@ -372,7 +516,11 @@ export default function MonitoringSanksiEtoser() {
             </select>
             <select 
               value={tahun} 
-              onChange={(e) => setTahun(e.target.value)} 
+              onChange={(e) => {
+                setStartDate('');
+                setEndDate('');
+                setTahun(e.target.value);
+              }} 
               className="bg-transparent text-[11px] md:text-xs font-bold text-slate-800 focus:outline-none cursor-pointer border-l border-slate-200 pl-1.5 shrink-0"
             >
               <option value="all">Semua</option>
@@ -432,6 +580,48 @@ export default function MonitoringSanksiEtoser() {
             <option value="APPROVED">Terverifikasi</option>
             <option value="REJECTED">Ditolak</option>
           </select>
+        </div>
+
+        {/* Date Range Filter Row */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-[11px] md:text-xs">
+          <span className="font-bold text-slate-600 flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-teal-600" />
+            Filter Rentang Tanggal Input:
+          </span>
+          <div className="flex items-center gap-1.5 flex-wrap flex-1 sm:flex-initial">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              title="Dari Tanggal"
+            />
+            <span className="text-slate-400 font-bold">s/d</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              title="Sampai Tanggal"
+            />
+            {hasActiveDateRange && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStartDate('');
+                  setEndDate('');
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold border border-rose-200 transition-colors cursor-pointer"
+              >
+                <X className="w-3 h-3" /> Reset Tanggal
+              </button>
+            )}
+          </div>
+          {hasActiveDateRange && (
+            <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-md">
+              Menampilkan data tanggal {startDate || 'Awal'} s/d {endDate || 'Sekarang'}
+            </span>
+          )}
         </div>
       </div>
 
@@ -532,7 +722,7 @@ export default function MonitoringSanksiEtoser() {
 
             <button
               type="button"
-              onClick={handleExportCSV}
+              onClick={openExportModal}
               className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 bg-teal-700 hover:bg-teal-800 text-white px-4 py-2 rounded-xl font-bold text-xs transition-all shadow-md shadow-teal-900/10 active:scale-95 cursor-pointer"
             >
               <Download className="w-4 h-4" /> Export CSV
@@ -621,7 +811,7 @@ export default function MonitoringSanksiEtoser() {
                                 </div>
                                 <p className="text-slate-800 font-semibold leading-snug">{c.detailPelanggaran}</p>
                                 <p className="text-[10px] text-slate-400">
-                                  Masa Perbaikan: {c.masaPerbaikan} • Oleh: {c.fasilName}
+                                  Tgl Input: {formatDateID(c.timestamp)} • Masa: {c.masaPerbaikan} • Oleh: {c.fasilName}
                                 </p>
                                 {c.keterangan && c.keterangan !== '-' && (
                                   <p className="text-[11px] text-slate-500 italic">"{c.keterangan}"</p>
@@ -756,7 +946,7 @@ export default function MonitoringSanksiEtoser() {
                                         {c.poin} Poin • Credit: {c.creditPerform}
                                       </span>
                                       <span className="text-[10px] font-semibold text-slate-500">
-                                        • Masa Perbaikan: {c.masaPerbaikan}
+                                        • Tgl Input: {formatDateID(c.timestamp)}
                                       </span>
                                       <span className="text-[10px] text-slate-400">
                                         • Oleh: {c.fasilName}
@@ -853,6 +1043,8 @@ export default function MonitoringSanksiEtoser() {
                     </div>
                     <p className="text-xs font-bold text-slate-800">{c.detailPelanggaran}</p>
                     <div className="text-[11px] text-slate-500 flex flex-wrap gap-2 pt-1 border-t border-slate-100">
+                      <span>Tgl Input: <strong>{formatDateID(c.timestamp)}</strong></span>
+                      <span>•</span>
                       <span>Masa Perbaikan: <strong>{c.masaPerbaikan}</strong></span>
                       <span>•</span>
                       <span>Oleh: <strong>{c.fasilName}</strong></span>
@@ -892,7 +1084,7 @@ export default function MonitoringSanksiEtoser() {
                   <tr>
                     <th className="p-4 font-black">Etoser & ID</th>
                     <th className="p-4 font-black">Wilayah / Angkatan</th>
-                    <th className="p-4 font-black">Periode</th>
+                    <th className="p-4 font-black">Tgl Input / Periode</th>
                     <th className="p-4 font-black">Kategori & Pelanggaran</th>
                     <th className="p-4 font-black text-center">Poin</th>
                     <th className="p-4 font-black text-center">Credit Perform</th>
@@ -916,8 +1108,9 @@ export default function MonitoringSanksiEtoser() {
                         <td className="p-4 font-semibold text-slate-600 whitespace-nowrap">
                           {c.wilayah} • {c.angkatan}
                         </td>
-                        <td className="p-4 whitespace-nowrap font-bold text-teal-800">
-                          {c.periodMonth} {c.periodYear}
+                        <td className="p-4 whitespace-nowrap">
+                          <div className="font-bold text-slate-800">{formatDateID(c.timestamp)}</div>
+                          <div className="text-[10px] font-bold text-teal-700">{c.periodMonth} {c.periodYear}</div>
                         </td>
                         <td className="p-4 max-w-sm">
                           <div className="flex items-center gap-1.5 mb-1">
@@ -984,6 +1177,163 @@ export default function MonitoringSanksiEtoser() {
           </>
         )}
       </div>
+
+      {/* Modal Export CSV dengan Pemilihan Rentang Tanggal */}
+      {isExportModalOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          onClick={() => setIsExportModalOpen(false)}
+          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full max-h-[90dvh] flex flex-col shadow-2xl border border-slate-100 overflow-hidden cursor-default"
+          >
+            <div className="p-5 sm:p-6 bg-gradient-to-r from-teal-700 to-teal-900 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-white/15">
+                  <Download className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black">Export CSV Daftar Sanksi</h3>
+                  <p className="text-xs text-teal-100">Pilih rentang tanggal spesifik & format laporan Keuangan</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsExportModalOpen(false)}
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleExecuteExportCSV} className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-4">
+              {/* Quick Presets */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-2">Pintasan Rentang Waktu</label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => applyExportDatePreset('all')}
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
+                      !exportStartDate && !exportEndDate
+                        ? 'bg-teal-700 text-white border-teal-700'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    Sesuai Filter Bulan ({bulan === 'all' ? 'Semua' : bulan} {tahun})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyExportDatePreset('today')}
+                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-teal-50 hover:text-teal-800 hover:border-teal-200 transition-colors cursor-pointer"
+                  >
+                    Hari Ini
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyExportDatePreset('7d')}
+                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-teal-50 hover:text-teal-800 hover:border-teal-200 transition-colors cursor-pointer"
+                  >
+                    7 Hari Terakhir
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyExportDatePreset('30d')}
+                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-teal-50 hover:text-teal-800 hover:border-teal-200 transition-colors cursor-pointer"
+                  >
+                    30 Hari Terakhir
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyExportDatePreset('thisMonth')}
+                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-teal-50 hover:text-teal-800 hover:border-teal-200 transition-colors cursor-pointer"
+                  >
+                    Bulan Ini
+                  </button>
+                </div>
+              </div>
+
+              {/* Date Range Pickers */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Dari Tanggal</label>
+                  <input
+                    type="date"
+                    value={exportStartDate}
+                    onChange={(e) => setExportStartDate(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Sampai Tanggal</label>
+                  <input
+                    type="date"
+                    value={exportEndDate}
+                    onChange={(e) => setExportEndDate(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  />
+                </div>
+              </div>
+
+              {/* Format Laporan */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Jenis Format Laporan CSV</label>
+                <select
+                  value={exportMode}
+                  onChange={(e) => setExportMode(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                >
+                  <option value="rekap">Rekap Potongan Per Etoser (Keuangan & Credit Point)</option>
+                  <option value="rincian">Rincian Kasus Pelanggaran (Lengkap Tanggal Input)</option>
+                </select>
+              </div>
+
+              {/* Filter Status Verifikasi */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Status Sanksi yang Diekspor</label>
+                <select
+                  value={exportStatusFilter}
+                  onChange={(e) => setExportStatusFilter(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                >
+                  <option value="all">Semua Status (Terverifikasi & Menunggu)</option>
+                  <option value="APPROVED">Hanya yang Sudah Terverifikasi (Approved)</option>
+                  <option value="PENDING">Hanya yang Menunggu Verifikasi (Pending)</option>
+                </select>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-teal-50/80 border border-teal-200 text-xs text-teal-900 space-y-1">
+                <p className="font-bold">Ringkasan Rentang Export:</p>
+                <p className="text-[11px] text-teal-800">
+                  {exportStartDate || exportEndDate
+                    ? `Mengekspor data sanksi yang diinput mulai ${exportStartDate || 'awal'} sampai ${exportEndDate || 'hari ini'}.`
+                    : `Mengekspor data sanksi periode ${bulan === 'all' ? 'Semua Bulan' : bulan} ${tahun === 'all' ? 'Semua Tahun' : tahun}.`}
+                </p>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
+                <button
+                  type="button"
+                  onClick={() => setIsExportModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs sm:text-sm hover:bg-slate-50 cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={exporting}
+                  className="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  Unduh CSV Sekarang
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Modal Tambah Sanksi oleh Admin */}
       {isAddModalOpen && typeof document !== 'undefined' && createPortal(

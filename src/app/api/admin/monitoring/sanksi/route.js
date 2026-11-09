@@ -50,6 +50,11 @@ export async function GET(req) {
     const angkatan = searchParams.get('angkatan') || 'all';
     const kategori = searchParams.get('kategori') || 'all';
     const statusFilter = searchParams.get('status') || 'all';
+    const startDate = searchParams.get('startDate') || ''; // YYYY-MM-DD
+    const endDate = searchParams.get('endDate') || '';     // YYYY-MM-DD
+
+    const startMs = startDate ? new Date(`${startDate}T00:00:00`).getTime() : null;
+    const endMs = endDate ? new Date(`${endDate}T23:59:59.999`).getTime() : null;
 
     const allUsers = await db.select().from(users);
     const allSanksi = await db.select().from(sanksi_user);
@@ -78,6 +83,7 @@ export async function GET(req) {
         const fasil = userMap[s.fasil_id] || {};
         const cat = katalogMap[s.katalog_sanksi_id] || {};
         const isInputByAdmin = fasil.role?.toUpperCase() === 'ADMIN' || s.fasil_id === authUser.id;
+        const tsDate = s.timestamp ? new Date(s.timestamp) : null;
 
         return {
           id: s.id,
@@ -98,19 +104,27 @@ export async function GET(req) {
           status: s.status || 'PENDING',
           periodMonth: s.period_month || '-',
           periodYear: s.period_year || '-',
-          timestamp: s.timestamp
+          timestamp: tsDate ? tsDate.toISOString() : null,
+          timestampMs: tsDate ? tsDate.getTime() : 0
         };
       })
       .filter(row => {
-        if (tahun !== 'all' && row.periodYear !== tahun) return false;
-        if (bulan !== 'all' && row.periodMonth !== bulan) return false;
+        // If date range is specified, filter by timestampMs; otherwise use bulan/tahun filter
+        if (startMs !== null || endMs !== null) {
+          if (startMs !== null && row.timestampMs < startMs) return false;
+          if (endMs !== null && row.timestampMs > endMs) return false;
+        } else {
+          if (tahun !== 'all' && row.periodYear !== tahun) return false;
+          if (bulan !== 'all' && row.periodMonth !== bulan) return false;
+        }
+
         if (wilayah !== 'all' && row.wilayah !== wilayah) return false;
         if (angkatan !== 'all' && row.angkatan !== angkatan) return false;
         if (kategori !== 'all' && row.kategori !== kategori) return false;
         if (statusFilter !== 'all' && row.status !== statusFilter) return false;
         return true;
       })
-      .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+      .sort((a, b) => b.timestampMs - a.timestampMs);
 
     // Group by Etoser + Period for Finance / Credit Deduction Summary
     const groupedMap = {};
@@ -130,6 +144,7 @@ export async function GET(req) {
           approvedCount: 0,
           totalPoin: 0,
           approvedPoin: 0,
+          latestTimestamp: c.timestamp,
           cases: []
         };
       }
@@ -259,7 +274,6 @@ export async function PUT(req) {
       return NextResponse.json({ error: 'Status verifikasi tidak valid.' }, { status: 400 });
     }
 
-    // Support bulk verification (e.g. Approve all pending for an Etoser or period)
     if (Array.isArray(ids) && ids.length > 0) {
       await db.update(sanksi_user).set({ status }).where(inArray(sanksi_user.id, ids));
       return NextResponse.json({
