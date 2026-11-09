@@ -254,3 +254,33 @@ export const agenda_submissions = sqliteTable('agenda_submissions', {
   submitted_at: text('submitted_at'),
 });
 
+export const push_subscriptions = sqliteTable('push_subscriptions', {
+  id: text('id').primaryKey(),
+  user_id: text('user_id').notNull(),
+  user_name: text('user_name'),
+  role: text('role').notNull(), // 'ADMIN', 'FASIL', 'ETOSER' / 'PM'
+  wilayah: text('wilayah'),
+  angkatan: text('angkatan'),
+  endpoint: text('endpoint').notNull(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  user_agent: text('user_agent'),
+  created_at: text('created_at').notNull(),
+  updated_at: text('updated_at').notNull(),
+});
+
+export const push_broadcasts = sqliteTable('push_broadcasts', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  body: text('body').notNull(),
+  url: text('url'),
+  category: text('category').default('PENGUMUMAN'), // 'UPDATE_FITUR', 'PENGUMUMAN', 'REMINDER_MONEV', 'INFO_AGENDA'
+  target_role: text('target_role').default('ALL'), // 'ALL', 'ETOSER', 'FASIL', 'ADMIN'
+  sent_by: text('sent_by'),
+  total_targeted: integer('total_targeted').default(0),
+  total_success: integer('total_success').default(0),
+  total_failed: integer('total_failed').default(0),
+  created_at: text('created_at').notNull(),
+});
+
+

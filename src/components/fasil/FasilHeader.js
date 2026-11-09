@@ -1,9 +1,10 @@
 "use client";
-import { User, Bell, LogOut, Search, Loader2, Link as LinkIcon, Calendar, ChevronDown, ArrowLeft } from 'lucide-react';
+import { User, LogOut, Search, Loader2, Link as LinkIcon, Calendar, ChevronDown, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import MobileHeaderTools from '@/components/navigation/MobileHeaderTools';
+import NotificationBellPopover from '@/components/pwa/NotificationBellPopover';
 
 export default function FasilHeader({ userInitial = 'F', onLogout }) {
   const router = useRouter();
@@ -227,10 +228,7 @@ export default function FasilHeader({ userInitial = 'F', onLogout }) {
 
         <div className="flex items-center gap-1.5 md:gap-4 border-l border-orange-200/50 pl-2.5 md:pl-6 ml-0.5 md:ml-2">
           <MobileHeaderTools role="fasil" searchEndpoint="/api/fasil/search" />
-          <button className="w-8 h-8 md:w-10 md:h-10 bg-white/50 backdrop-blur-md border border-white/60 rounded-full flex items-center justify-center text-orange-700 hover:bg-white hover:text-orange-600 shadow-sm transition-all relative">
-            <Bell className="w-4 h-4 md:w-5 md:h-5" />
-            <span className="absolute top-1.5 right-1.5 md:top-2 md:right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
-          </button>
+          <NotificationBellPopover role="fasil" theme="orange" />
           
           <div className="flex items-center gap-1.5 md:gap-3">
             <button

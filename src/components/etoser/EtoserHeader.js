@@ -1,9 +1,10 @@
 "use client";
-import { Bell, LogOut, Search, Loader2, Link as LinkIcon, Calendar, ChevronDown } from 'lucide-react';
+import { LogOut, Search, Loader2, Link as LinkIcon, Calendar, ChevronDown } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import MobileHeaderTools from '@/components/navigation/MobileHeaderTools';
+import NotificationBellPopover from '@/components/pwa/NotificationBellPopover';
 
 export default function EtoserHeader({ handleLogout }) {
   const router = useRouter();
@@ -173,10 +174,7 @@ export default function EtoserHeader({ handleLogout }) {
 
         <div className="flex items-center gap-1.5 md:gap-4 border-l border-sky-200/50 pl-2.5 md:pl-6 ml-0.5 md:ml-2">
           <MobileHeaderTools role="etoser" searchEndpoint="/api/etoser/search" />
-          <button className="w-8 h-8 md:w-10 md:h-10 bg-white/50 backdrop-blur-md border border-white/60 rounded-full flex items-center justify-center text-sky-700 hover:bg-white hover:text-sky-600 shadow-sm transition-all relative">
-            <Bell className="w-4 h-4 md:w-5 md:h-5" />
-            <span className="absolute top-1.5 right-1.5 md:top-2 md:right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
-          </button>
+          <NotificationBellPopover role="etoser" theme="sky" />
 
           <div className="flex items-center gap-1.5 md:gap-3">
             <button

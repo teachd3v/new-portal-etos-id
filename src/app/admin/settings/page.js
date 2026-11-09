@@ -7,6 +7,7 @@ import InstrumenEtoserTab from '@/components/admin/settings/InstrumenEtoserTab';
 import InstrumenFasilTab from '@/components/admin/settings/InstrumenFasilTab';
 import InstrumenPeerTab from '@/components/admin/settings/InstrumenPeerTab';
 import SanksiTab from '@/components/admin/settings/SanksiTab';
+import BroadcastPushTab from '@/components/admin/settings/BroadcastPushTab';
 
 function SettingsContent() {
   const searchParams = useSearchParams();
@@ -25,6 +26,7 @@ function SettingsContent() {
     { id: 'fasil', component: InstrumenFasilTab },
     { id: 'etoser', component: InstrumenEtoserTab },
     { id: 'sanksi', component: SanksiTab },
+    { id: 'broadcast', component: BroadcastPushTab },
   ];
 
   const ActiveComponent = tabs.find(t => t.id === activeTab)?.component || SystemSettingsTab;

@@ -1,4 +1,4 @@
-const STATIC_CACHE = 'etos-portal-static-v2';
+const STATIC_CACHE = 'etos-portal-static-v3';
 const OFFLINE_URL = '/offline';
 
 const PRECACHE_ASSETS = [
@@ -134,3 +134,82 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+// 5. Push Notification Event (VAPID Web Push)
+self.addEventListener('push', (event) => {
+  let payload = {
+    title: 'Portal Etos ID',
+    body: 'Ada informasi terbaru di Portal Etos ID.',
+    url: '/',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-96x96.png',
+    category: 'PENGUMUMAN',
+    timestamp: Date.now(),
+  };
+
+  if (event.data) {
+    try {
+      const parsed = event.data.json();
+      payload = { ...payload, ...parsed };
+    } catch {
+      payload.body = event.data.text() || payload.body;
+    }
+  }
+
+  const notificationOptions = {
+    body: payload.body,
+    icon: payload.icon || '/icons/icon-192x192.png',
+    badge: payload.badge || '/icons/icon-96x96.png',
+    vibrate: [100, 50, 100],
+    tag: payload.tag || `etos-push-${payload.timestamp || Date.now()}`,
+    renotify: true,
+    data: {
+      url: payload.url || '/',
+      category: payload.category || 'PENGUMUMAN',
+      timestamp: payload.timestamp || Date.now(),
+    },
+  };
+
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(payload.title || 'Portal Etos ID', notificationOptions),
+      self.clients
+        .matchAll({ type: 'window', includeUncontrolled: true })
+        .then((windowClients) => {
+          windowClients.forEach((client) => {
+            client.postMessage({
+              type: 'PUSH_NOTIFICATION_RECEIVED',
+              payload,
+            });
+          });
+        })
+        .catch(() => {}),
+    ])
+  );
+});
+
+// 6. Notification Click Event (Deep Linking)
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetPath = (event.notification.data && event.notification.data.url) || '/';
+  const targetUrl = new URL(targetPath, self.location.origin).href;
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((windowClients) => {
+        for (const client of windowClients) {
+          if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+            if ('navigate' in client) {
+              return client.navigate(targetUrl).then((c) => (c ? c.focus() : null));
+            }
+            return client.focus();
+          }
+        }
+        if (self.clients.openWindow) {
+          return self.clients.openWindow(targetUrl);
+        }
+      })
+  );
+});
+

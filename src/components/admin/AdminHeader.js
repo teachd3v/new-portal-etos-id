@@ -1,9 +1,10 @@
 "use client";
 import Link from 'next/link';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
-import { Search, Bell, LogOut, Loader2, Link as LinkIcon, User, Calendar, ChevronDown, ArrowLeft } from 'lucide-react';
+import { Search, LogOut, Loader2, Link as LinkIcon, User, Calendar, ChevronDown, ArrowLeft } from 'lucide-react';
 import { Suspense, useState, useEffect, useRef } from 'react';
 import MobileHeaderTools from '@/components/navigation/MobileHeaderTools';
+import NotificationBellPopover from '@/components/pwa/NotificationBellPopover';
 
 function HeaderContent({ handleLogout }) {
   const pathname = usePathname();
@@ -116,6 +117,7 @@ function HeaderContent({ handleLogout }) {
                   className="header-pill-select bg-white/90 backdrop-blur-md border border-teal-200/90 text-teal-950 font-bold text-xs py-1.5 pl-3 pr-8 rounded-full shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500/30 cursor-pointer max-w-[165px] sm:max-w-[210px] truncate"
                 >
                   <option value="/admin/settings?tab=system">Sistem & Periode</option>
+                  <option value="/admin/settings?tab=broadcast">Broadcast Push</option>
                   <option value="/admin/settings?tab=reli">Instrumen RELI</option>
                   <option value="/admin/settings?tab=fasil">Instrumen Fasil</option>
                   <option value="/admin/settings?tab=etoser">Instrumen Etoser</option>
@@ -165,10 +167,11 @@ function HeaderContent({ handleLogout }) {
           </div>
 
           {/* Desktop Navigation Tabs (>= md) */}
-          <div className="hidden md:flex gap-8 items-center text-sm font-bold text-[#8B92A5]">
+          <div className="hidden md:flex gap-6 lg:gap-8 items-center text-sm font-bold text-[#8B92A5]">
             {isSettings ? (
               <>
                 <Link href="/admin/settings?tab=system" scroll={false} className={tab === 'system' ? activeClass : inactiveClass}>Sistem & Periode</Link>
+                <Link href="/admin/settings?tab=broadcast" scroll={false} className={tab === 'broadcast' ? activeClass : inactiveClass}>Broadcast Push</Link>
                 <Link href="/admin/settings?tab=reli" scroll={false} className={tab === 'reli' ? activeClass : inactiveClass}>Instrumen RELI</Link>
                 <Link href="/admin/settings?tab=fasil" scroll={false} className={tab === 'fasil' ? activeClass : inactiveClass}>Instrumen Fasil</Link>
                 <Link href="/admin/settings?tab=etoser" scroll={false} className={tab === 'etoser' ? activeClass : inactiveClass}>Instrumen Etoser</Link>
@@ -246,9 +249,7 @@ function HeaderContent({ handleLogout }) {
         
         <div className="flex items-center gap-1.5 md:gap-4 border-l border-teal-200/50 pl-2.5 md:pl-6 ml-0.5 md:ml-2">
           <MobileHeaderTools role="admin" searchEndpoint="/api/admin/search" />
-          <button className="w-8 h-8 md:w-10 md:h-10 bg-white/50 backdrop-blur-md border border-white/60 rounded-full flex items-center justify-center text-teal-700 hover:bg-white hover:text-[#0F766E] shadow-sm transition-all">
-            <Bell className="w-4 h-4 md:w-5 md:h-5" />
-          </button>
+          <NotificationBellPopover role="admin" theme="teal" />
           
           <div className="flex items-center gap-1.5 md:gap-3">
             <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-tr from-[#0F766E] to-teal-400 border-2 border-white/80 shadow-md overflow-hidden flex justify-center items-center text-white font-bold text-xs md:text-sm cursor-pointer hover:scale-105 transition-transform">

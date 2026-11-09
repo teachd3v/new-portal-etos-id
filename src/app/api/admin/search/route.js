@@ -22,6 +22,7 @@ export async function GET(req) {
       { type: 'Menu', label: 'Presensi Kehadiran', url: '/admin/agendas?tab=presensi' },
       { type: 'Menu', label: 'Skor Pre & Post Test Agenda', url: '/admin/agendas?tab=skor' },
       { type: 'Menu', label: 'Pengaturan Sistem & Periode Asesmen', url: '/admin/settings?tab=system' },
+      { type: 'Menu', label: 'Broadcast & Web Push Notifikasi (VAPID)', url: '/admin/settings?tab=broadcast' },
       { type: 'Menu', label: 'Master Instrumen RELI (BAR 64 Butir)', url: '/admin/settings?tab=reli' },
       { type: 'Menu', label: 'Master Katalog Sanksi', url: '/admin/settings?tab=sanksi' }
     ].filter(menu => menu.label.toLowerCase().includes(q.toLowerCase()));
